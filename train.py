@@ -1,4 +1,5 @@
 import config
+import numpy as np
 import tensorflow as tf
 import data_processer
 import lib.seq2seq_model as seq2seq_model
@@ -36,12 +37,12 @@ def read_data_into_buckets(enc_path, dec_path, buckets):
 
 
 # Originally from https://github.com/1228337123/tensorflow-seq2seq-chatbot
-def create_model(session, forward_only):
+def create_model(session, buckets, forward_only):
 
   """Create model and initialize or load parameters"""
   model = seq2seq_model.Seq2SeqModel(config.MAX_ENC_VOCABULARY,
                                      config.MAX_DEC_VOCABULARY,
-                                     _buckets,
+                                     buckets,
                                      config.LAYER_SIZE,
                                      config.NUM_LAYERS,
                                      config.MAX_GRADIENT_NORM,
@@ -63,6 +64,10 @@ def create_model(session, forward_only):
     session.run(tf.initialize_all_variables())
   return model
 
+def next_random_bucket_id(buckets_scale):
+  n = np.random.random_sample()
+  bucket_id = min([i for i in range(len(buckets_scale)) if buckets_scale[i] > n])
+  return bucket_id
 
 def train():
   # Only allocate 2/3 of the gpu memory to allow for running gpu-based predictions while training:
@@ -72,11 +77,39 @@ def train():
 
 
   with tf.Session(config=tf_config) as sess:
-    print("Creating model...")
-#    model = create_model(sess, forward_only=False)
-    print("Done")
     buckets = [(5, 10), (10, 15), (20, 25), (40, 50)]
-    data_set = read_data_into_buckets(config.TWEETS_TRAIN_ENC_IDX_TXT, config.TWEETS_TRAIN_DEC_IDX_TXT, buckets)
+
+    print("Setting up data set for each buckets")
+    train_set = read_data_into_buckets(config.TWEETS_TRAIN_ENC_IDX_TXT, config.TWEETS_TRAIN_DEC_IDX_TXT, buckets)
+    print("Done")
+
+    print("Creating model...")
+    model = create_model(sess, buckets, forward_only=False)
+    print("Done")
+
+    # list of # of data in ith bucket
+    train_bucket_sizes = [len(train_set[b]) for b in range(len(buckets))]
+    train_total_size = float(sum(train_bucket_sizes))
+
+    # Originally from https://github.com/1228337123/tensorflow-seq2seq-chatbot
+    # This is for choosing randomly bucket based on distribution
+    train_buckets_scale = [sum(train_bucket_sizes[:i + 1]) / train_total_size
+                           for i in range(len(train_bucket_sizes))]
+
+    # Train Loop
+    while True:
+      bucket_id = next_random_bucket_id(train_buckets_scale)
+
+      # Get batch
+      encoder_inputs, decoder_inputs, target_weights = model.get_batch(train_set, bucket_id)
+
+      print("Training bucket_id={0}...".format(bucket_id))
+
+      # Train!
+      _, step_loss, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id, False)
+    
+      print("Done")
+
 
 if __name__ == '__main__':
   train()
