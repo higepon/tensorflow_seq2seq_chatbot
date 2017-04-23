@@ -1,7 +1,9 @@
 import re
+import sys
+import MeCab # for Japanese tokenizer
 from tensorflow.python.platform import gfile
 
-# Data format
+# The data format
 #
 # (A) data/tweets.txt
 #   You have to parepare this file by yourself.
@@ -18,12 +20,51 @@ from tensorflow.python.platform import gfile
 # (C) generated/tweets_dec.txt
 #   Each lines consists of one reply, @username and URL are removed.
 #
+# (D) generated/tweets_train_[enc|dec].txt
+#   Tweets or replies train data
+#
+# (E) generated/tweets_val_[enc|dec].txt
+#   Tweets or replies validation data
+#
+# (F) generated/vocab_enc.txt
+#   Vocabulary for tweets.
+#   Words in frequency order
+#
+# (G) generated/vocab_dec.txt
+#   Vocabulary for replies.
+#   Words in frequency order
 
 DATA_DIR = "data"
 GENERATED_DIR = "generated"
+
+MAX_ENC_VOCABULARY = 20000
+MAX_DEC_VOCABULARY = MAX_ENC_VOCABULARY
+
 TWEETS_TXT = "{0}/tweets.txt".format(DATA_DIR)
+
 TWEETS_ENC_TXT = "{0}/tweets_enc.txt".format(GENERATED_DIR)
 TWEETS_DEC_TXT = "{0}/tweets_dec.txt".format(GENERATED_DIR)
+
+TWEETS_TRAIN_ENC_TXT = "{0}/tweets_train_enc.txt".format(GENERATED_DIR)
+TWEETS_TRAIN_DEC_TXT = "{0}/tweets_train_dec.txt".format(GENERATED_DIR)
+TWEETS_VAL_ENC_TXT = "{0}/tweets_val_enc.txt".format(GENERATED_DIR)
+TWEETS_VAL_DEC_TXT = "{0}/tweets_val_dec.txt".format(GENERATED_DIR)
+
+VOCAB_ENC_TXT = "{0}/vocab_enc.txt".format(GENERATED_DIR)
+VOCAB_DEC_TXT = "{0}/vocab_dec.txt".format(GENERATED_DIR)
+
+DIGIT_RE = re.compile(br"\d")
+_PAD = b"_PAD"
+_GO = b"_GO"
+_EOS = b"_EOS"
+_UNK = b"_UNK"
+_START_VOCAB = [_PAD, _GO, _EOS, _UNK]
+
+tagger = MeCab.Tagger("-Owakati")  
+
+def japanese_tokenizer(sentence):
+  result = tagger.parse(sentence)
+  return [x.encode('utf-8') for x in result.split()]
 
 def split_tweets_replies(tweets_path, enc_path, dec_path):
   """Read data from tweets_paths and split it to tweets and replies.
@@ -43,7 +84,7 @@ def split_tweets_replies(tweets_path, enc_path, dec_path):
       line = re.sub(r"@([A-Za-z0-9_]+)", "", line)
       # Remove URL
       line = re.sub(r'https?:\/\/.*', "", line)
-      
+
       # Odd lines are tweets
       if i % 2 == 1:
         ef.write(line)
@@ -52,7 +93,92 @@ def split_tweets_replies(tweets_path, enc_path, dec_path):
         df.write(line)
       i = i + 1
 
+def num_lines(file):
+  """Return # of lines in file
+
+    Args:
+      file: Target file.
+
+    Returns:
+      # of lines in file
+    """
+  return sum(1 for line in open(file))
+
+def create_train_validation(source_path, train_path, validation_path, train_ratio=0.75):
+  """Split source file into train and validation data
+
+    Args:
+      source_path: source file path
+      train_path: Path to write train data
+      validation_path: Path to write validatio data
+      train_ratio: Train data ratio
+
+    Returns:
+      None
+    """
+  nb_lines = num_lines(source_path)
+  nb_train = int(nb_lines * train_ratio)
+  counter = 0
+  with gfile.GFile(source_path, "r") as f, gfile.GFile(train_path, "w") as tf, gfile.GFile(validation_path, "w") as vf:
+    for line in f:
+      if counter < nb_train:
+        tf.write(line)
+      else:
+        vf.write(line)
+      counter = counter + 1
+
+# From https://github.com/1228337123/tensorflow-seq2seq-chatbot
+def create_vocabulary(source_path, vocabulary_path, max_vocabulary_size, tokenizer=japanese_tokenizer):
+  """Create vocabulary file. Please see comments in head for file format
+
+    Args:
+      source_path: source file path
+      vocabulary_path: Path to write vocabulary
+      max_vocabulary_size: Max vocabulary size
+      tokenizer: tokenizer used for tokenize each lines
+
+    Returns:
+      None
+    """
+  if gfile.Exists(vocabulary_path):
+    print("Found vocabulary file")
+    return
+  with gfile.GFile(source_path, mode="rb") as f:
+    counter = 0
+    vocab = {} # (word, word_freq)
+    for line in f:
+      counter += 1
+      words = tokenizer(line)
+      if counter % 5000 == 0:
+        sys.stdout.write(".")
+        sys.stdout.flush()
+      for word in words:
+        # Normalize numbers. Not sure if it's necessary.
+        word = re.sub(DIGIT_RE, b"0", word)
+        if word in vocab:
+          vocab[word] += 1
+        else:
+          vocab[word] = 1
+    vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
+    if len(vocab_list) > max_vocabulary_size:
+      vocab_list = vocab_list[:max_vocabulary_size]
+    with gfile.GFile(vocabulary_path, mode="wb") as vocab_file:
+      for w in vocab_list:
+        vocab_file.write(w + b"\n")
+    print("\n")
+
 if __name__ == '__main__':
-  print("Splitting to tweets and replies...")
+
+  print("Splitting into tweets and replies...")
   split_tweets_replies(TWEETS_TXT, TWEETS_ENC_TXT, TWEETS_DEC_TXT)
+  print("Done")
+
+  print("Splitting into train and validation data...")
+  create_train_validation(TWEETS_ENC_TXT, TWEETS_TRAIN_ENC_TXT, TWEETS_VAL_ENC_TXT)
+  create_train_validation(TWEETS_DEC_TXT, TWEETS_TRAIN_DEC_TXT, TWEETS_VAL_DEC_TXT)
+  print("Done")
+
+  print("Creating vocabulary files...")
+  create_vocabulary(TWEETS_ENC_TXT, VOCAB_ENC_TXT, MAX_ENC_VOCABULARY)
+  create_vocabulary(TWEETS_DEC_TXT, VOCAB_DEC_TXT, MAX_DEC_VOCABULARY)
   print("Done")
