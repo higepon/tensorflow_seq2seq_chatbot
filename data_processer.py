@@ -40,30 +40,27 @@ from tensorflow.python.platform import gfile
 # (H) generated/tweets_[train|val]_[dec|enc]_idx.txt
 #   Generated from tweets_[train|val]_[enc|dec].txt.
 #   All words in the source file are replaced idx to the word.
-#   
+#
 
 import sys
 
 DATA_DIR = "data"
-GENERATED_DIR = "generated"
 
 TWEETS_TXT = "{0}/tweets.txt".format(DATA_DIR)
 
-TWEETS_ENC_TXT = "{0}/tweets_enc.txt".format(GENERATED_DIR)
-TWEETS_DEC_TXT = "{0}/tweets_dec.txt".format(GENERATED_DIR)
+TWEETS_ENC_TXT = "{0}/tweets_enc.txt".format(config.GENERATED_DIR)
+TWEETS_DEC_TXT = "{0}/tweets_dec.txt".format(config.GENERATED_DIR)
 
-TWEETS_TRAIN_ENC_TXT = "{0}/tweets_train_enc.txt".format(GENERATED_DIR)
-TWEETS_TRAIN_DEC_TXT = "{0}/tweets_train_dec.txt".format(GENERATED_DIR)
-TWEETS_TRAIN_ENC_IDX_TXT = "{0}/tweets_train_enc_idx.txt".format(GENERATED_DIR)
-TWEETS_TRAIN_DEC_IDX_TXT = "{0}/tweets_train_dec_idx.txt".format(GENERATED_DIR)
+TWEETS_TRAIN_ENC_TXT = "{0}/tweets_train_enc.txt".format(config.GENERATED_DIR)
+TWEETS_TRAIN_DEC_TXT = "{0}/tweets_train_dec.txt".format(config.GENERATED_DIR)
 
-TWEETS_VAL_ENC_TXT = "{0}/tweets_val_enc.txt".format(GENERATED_DIR)
-TWEETS_VAL_DEC_TXT = "{0}/tweets_val_dec.txt".format(GENERATED_DIR)
-TWEETS_VAL_ENC_IDX_TXT = "{0}/tweets_val_enc_idx.txt".format(GENERATED_DIR)
-TWEETS_VAL_DEC_IDX_TXT = "{0}/tweets_val_dec_idx.txt".format(GENERATED_DIR)
+TWEETS_VAL_ENC_TXT = "{0}/tweets_val_enc.txt".format(config.GENERATED_DIR)
+TWEETS_VAL_DEC_TXT = "{0}/tweets_val_dec.txt".format(config.GENERATED_DIR)
+TWEETS_VAL_ENC_IDX_TXT = "{0}/tweets_val_enc_idx.txt".format(config.GENERATED_DIR)
+TWEETS_VAL_DEC_IDX_TXT = "{0}/tweets_val_dec_idx.txt".format(config.GENERATED_DIR)
 
-VOCAB_ENC_TXT = "{0}/vocab_enc.txt".format(GENERATED_DIR)
-VOCAB_DEC_TXT = "{0}/vocab_dec.txt".format(GENERATED_DIR)
+VOCAB_ENC_TXT = "{0}/vocab_enc.txt".format(config.GENERATED_DIR)
+VOCAB_DEC_TXT = "{0}/vocab_dec.txt".format(config.GENERATED_DIR)
 
 DIGIT_RE = re.compile(br"\d")
 
@@ -78,7 +75,7 @@ GO_ID = 1
 EOS_ID = 2
 UNK_ID = 3
 
-tagger = MeCab.Tagger("-Owakati")  
+tagger = MeCab.Tagger("-Owakati")
 
 def japanese_tokenizer(sentence):
   result = tagger.parse(sentence)
@@ -145,7 +142,7 @@ def create_train_validation(source_path, train_path, validation_path, train_rati
         vf.write(line)
       counter = counter + 1
 
-# Originally from https://github.com/1228337123/tensorflow-seq2seq-chatbot      
+# Originally from https://github.com/1228337123/tensorflow-seq2seq-chatbot
 def sentence_to_token_ids(sentence, vocabulary, tokenizer=japanese_tokenizer, normalize_digits=True):
 
   sentence = sentence.decode('utf-8')
@@ -249,8 +246,8 @@ if __name__ == '__main__':
   print("Done")
 
   print("Creating sentence idx files...")
-  data_to_token_ids(TWEETS_TRAIN_ENC_TXT, TWEETS_TRAIN_ENC_IDX_TXT, VOCAB_ENC_TXT)
-  data_to_token_ids(TWEETS_TRAIN_DEC_TXT, TWEETS_TRAIN_DEC_IDX_TXT, VOCAB_DEC_TXT)
+  data_to_token_ids(TWEETS_TRAIN_ENC_TXT, config.TWEETS_TRAIN_ENC_IDX_TXT, VOCAB_ENC_TXT)
+  data_to_token_ids(TWEETS_TRAIN_DEC_TXT, config.TWEETS_TRAIN_DEC_IDX_TXT, VOCAB_DEC_TXT)
   data_to_token_ids(TWEETS_VAL_ENC_TXT, TWEETS_VAL_ENC_IDX_TXT, VOCAB_ENC_TXT)
-  data_to_token_ids(TWEETS_VAL_DEC_TXT, TWEETS_VAL_DEC_IDX_TXT, VOCAB_DEC_TXT)  
+  data_to_token_ids(TWEETS_VAL_DEC_TXT, TWEETS_VAL_DEC_IDX_TXT, VOCAB_DEC_TXT)
   print("Done")
