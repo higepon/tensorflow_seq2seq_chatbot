@@ -1,7 +1,9 @@
 import re
 import sys
 import tensorflow as tf
-import MeCab # for Japanese tokenizer
+import config
+# For Japanese tokenizer
+import MeCab
 from tensorflow.python.platform import gfile
 
 # The data format
@@ -44,9 +46,6 @@ import sys
 
 DATA_DIR = "data"
 GENERATED_DIR = "generated"
-
-MAX_ENC_VOCABULARY = 20000
-MAX_DEC_VOCABULARY = MAX_ENC_VOCABULARY
 
 TWEETS_TXT = "{0}/tweets.txt".format(DATA_DIR)
 
@@ -245,8 +244,8 @@ if __name__ == '__main__':
   print("Done")
 
   print("Creating vocabulary files...")
-  create_vocabulary(TWEETS_ENC_TXT, VOCAB_ENC_TXT, MAX_ENC_VOCABULARY)
-  create_vocabulary(TWEETS_DEC_TXT, VOCAB_DEC_TXT, MAX_DEC_VOCABULARY)
+  create_vocabulary(TWEETS_ENC_TXT, VOCAB_ENC_TXT, config.MAX_ENC_VOCABULARY)
+  create_vocabulary(TWEETS_DEC_TXT, VOCAB_DEC_TXT, config.MAX_DEC_VOCABULARY)
   print("Done")
 
   print("Creating sentence idx files...")
