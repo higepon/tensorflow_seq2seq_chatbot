@@ -1,5 +1,6 @@
 import re
 import sys
+import tensorflow as tf
 import MeCab # for Japanese tokenizer
 from tensorflow.python.platform import gfile
 
@@ -33,6 +34,13 @@ from tensorflow.python.platform import gfile
 # (G) generated/vocab_dec.txt
 #   Vocabulary for replies.
 #   Words in frequency order
+#
+# (H) generated/tweets_[train|val]_[dec|enc]_idx.txt
+#   Generated from tweets_[train|val]_[enc|dec].txt.
+#   All words in the source file are replaced idx to the word.
+#   
+
+import sys
 
 DATA_DIR = "data"
 GENERATED_DIR = "generated"
@@ -47,18 +55,29 @@ TWEETS_DEC_TXT = "{0}/tweets_dec.txt".format(GENERATED_DIR)
 
 TWEETS_TRAIN_ENC_TXT = "{0}/tweets_train_enc.txt".format(GENERATED_DIR)
 TWEETS_TRAIN_DEC_TXT = "{0}/tweets_train_dec.txt".format(GENERATED_DIR)
+TWEETS_TRAIN_ENC_IDX_TXT = "{0}/tweets_train_enc_idx.txt".format(GENERATED_DIR)
+TWEETS_TRAIN_DEC_IDX_TXT = "{0}/tweets_train_dec_idx.txt".format(GENERATED_DIR)
+
 TWEETS_VAL_ENC_TXT = "{0}/tweets_val_enc.txt".format(GENERATED_DIR)
 TWEETS_VAL_DEC_TXT = "{0}/tweets_val_dec.txt".format(GENERATED_DIR)
+TWEETS_VAL_ENC_IDX_TXT = "{0}/tweets_val_enc_idx.txt".format(GENERATED_DIR)
+TWEETS_VAL_DEC_IDX_TXT = "{0}/tweets_val_dec_idx.txt".format(GENERATED_DIR)
 
 VOCAB_ENC_TXT = "{0}/vocab_enc.txt".format(GENERATED_DIR)
 VOCAB_DEC_TXT = "{0}/vocab_dec.txt".format(GENERATED_DIR)
 
 DIGIT_RE = re.compile(br"\d")
+
 _PAD = b"_PAD"
 _GO = b"_GO"
 _EOS = b"_EOS"
 _UNK = b"_UNK"
 _START_VOCAB = [_PAD, _GO, _EOS, _UNK]
+
+PAD_ID = 0
+GO_ID = 1
+EOS_ID = 2
+UNK_ID = 3
 
 tagger = MeCab.Tagger("-Owakati")  
 
@@ -127,6 +146,53 @@ def create_train_validation(source_path, train_path, validation_path, train_rati
         vf.write(line)
       counter = counter + 1
 
+# Originally from https://github.com/1228337123/tensorflow-seq2seq-chatbot      
+def sentence_to_token_ids(sentence, vocabulary, tokenizer=japanese_tokenizer, normalize_digits=True):
+
+  sentence = sentence.decode('utf-8')
+  if tokenizer:
+    words = tokenizer(sentence)
+  else:
+    words = basic_tokenizer(sentence)
+  if not normalize_digits:
+    return [vocabulary.get(w, UNK_ID) for w in words]
+  # Normalize digits by 0 before looking words up in the vocabulary.
+  # return [vocabulary.get(re.sub(_DIGIT_RE, b"0", w), UNK_ID) for w in words] #mark added .decode by Ken
+  return [vocabulary.get(w.decode('utf-8'), UNK_ID) for w in words] # added  by Ken
+
+# Originally from https://github.com/1228337123/tensorflow-seq2seq-chatbot
+def data_to_token_ids(data_path, target_path, vocabulary_path,
+                      tokenizer=japanese_tokenizer, normalize_digits=True):
+
+  if not gfile.Exists(target_path):
+    print("Tokenizing data in %s" % data_path)
+    vocab, _ = initialize_vocabulary(vocabulary_path)
+    with gfile.GFile(data_path, mode="rb") as data_file:
+      with gfile.GFile(target_path, mode="wb") as tokens_file:  # edit w to wb
+        counter = 0
+        for line in data_file:
+            line = tf.compat.as_bytes(line)  # added by Ken
+            counter += 1
+            if counter % 100000 == 0:
+                print("  tokenizing line %d" % counter)
+            token_ids = sentence_to_token_ids(line, vocab, tokenizer,
+                                              normalize_digits)
+            tokens_file.write(" ".join([str(tok) for tok in token_ids]) + "\n")
+
+# Originally from https://github.com/1228337123/tensorflow-seq2seq-chatbot
+def initialize_vocabulary(vocabulary_path):
+
+  if gfile.Exists(vocabulary_path):
+    rev_vocab = []
+    with gfile.GFile(vocabulary_path, mode="rb") as f:
+      rev_vocab.extend(f.readlines())
+    rev_vocab = [line.strip() for line in rev_vocab]
+    # Dictionary of (word, idx)
+    vocab = dict([(x, y) for (y, x) in enumerate(rev_vocab)])
+    return vocab, rev_vocab
+  else:
+    raise ValueError("Vocabulary file %s not found.", vocabulary_path)
+
 # From https://github.com/1228337123/tensorflow-seq2seq-chatbot
 def create_vocabulary(source_path, vocabulary_path, max_vocabulary_size, tokenizer=japanese_tokenizer):
   """Create vocabulary file. Please see comments in head for file format
@@ -181,4 +247,11 @@ if __name__ == '__main__':
   print("Creating vocabulary files...")
   create_vocabulary(TWEETS_ENC_TXT, VOCAB_ENC_TXT, MAX_ENC_VOCABULARY)
   create_vocabulary(TWEETS_DEC_TXT, VOCAB_DEC_TXT, MAX_DEC_VOCABULARY)
+  print("Done")
+
+  print("Creating sentence idx files...")
+  data_to_token_ids(TWEETS_TRAIN_ENC_TXT, TWEETS_TRAIN_ENC_IDX_TXT, VOCAB_ENC_TXT)
+  data_to_token_ids(TWEETS_TRAIN_DEC_TXT, TWEETS_TRAIN_DEC_IDX_TXT, VOCAB_DEC_TXT)
+  data_to_token_ids(TWEETS_VAL_ENC_TXT, TWEETS_VAL_ENC_IDX_TXT, VOCAB_ENC_TXT)
+  data_to_token_ids(TWEETS_VAL_DEC_TXT, TWEETS_VAL_DEC_IDX_TXT, VOCAB_DEC_TXT)  
   print("Done")
