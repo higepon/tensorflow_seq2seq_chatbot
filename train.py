@@ -1,8 +1,15 @@
 import config
+import os
+import sys
+import math
 import numpy as np
 import tensorflow as tf
 import data_processer
 import lib.seq2seq_model as seq2seq_model
+
+def show_progress(text):
+  sys.stdout.write(text)
+  sys.stdout.flush()
 
 def read_data_into_buckets(enc_path, dec_path, buckets):
   """Read tweets and reply and put them into buckets based on their length
@@ -37,7 +44,7 @@ def read_data_into_buckets(enc_path, dec_path, buckets):
 
 
 # Originally from https://github.com/1228337123/tensorflow-seq2seq-chatbot
-def create_model(session, buckets, forward_only):
+def create_or_restore_model(session, buckets, forward_only):
 
   """Create model and initialize or load parameters"""
   model = seq2seq_model.Seq2SeqModel(config.MAX_ENC_VOCABULARY,
@@ -51,6 +58,7 @@ def create_model(session, buckets, forward_only):
                                      config.LEARNING_RATE_DECAY_FACTOR,
                                      forward_only=forward_only)
 
+  print("model initialized")
   ckpt = tf.train.get_checkpoint_state(config.GENERATED_DIR)
   # the checkpoint filename has changed in recent versions of tensorflow
   checkpoint_suffix = ""
@@ -79,13 +87,14 @@ def train():
   with tf.Session(config=tf_config) as sess:
     buckets = [(5, 10), (10, 15), (20, 25), (40, 50)]
 
-    print("Setting up data set for each buckets")
+    show_progress("Setting up data set for each buckets...")
     train_set = read_data_into_buckets(config.TWEETS_TRAIN_ENC_IDX_TXT, config.TWEETS_TRAIN_DEC_IDX_TXT, buckets)
-    print("Done")
+    valid_set = read_data_into_buckets(config.TWEETS_VAL_ENC_IDX_TXT, config.TWEETS_VAL_DEC_IDX_TXT, buckets)
+    show_progress("done\n")
 
-    print("Creating model...")
-    model = create_model(sess, buckets, forward_only=False)
-    print("Done")
+    show_progress("Creating model...")
+    model = create_or_restore_model(sess, buckets, forward_only=False)
+    show_progress("done\n")
 
     # list of # of data in ith bucket
     train_bucket_sizes = [len(train_set[b]) for b in range(len(buckets))]
@@ -97,19 +106,46 @@ def train():
                            for i in range(len(train_bucket_sizes))]
 
     # Train Loop
+    steps = 0
+    previous_perplexities = []
     while True:
       bucket_id = next_random_bucket_id(train_buckets_scale)
 
       # Get batch
       encoder_inputs, decoder_inputs, target_weights = model.get_batch(train_set, bucket_id)
-
-      print("Training bucket_id={0}...".format(bucket_id))
+      show_progress("Training bucket_id={0}...".format(bucket_id))
 
       # Train!
-      _, step_loss, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id, False)
-    
-      print("Done")
+      _, average_perplexity, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id, False)
+      show_progress("done {0}\n".format(average_perplexity))
 
+      steps = steps + 1
+      if steps % 150 != 0:
+        continue
+
+      # check point
+      checkpoint_path = os.path.join(config.GENERATED_DIR, "seq2seq.ckpt")
+      show_progress("Saving checkpoint...")
+      model.saver.save(sess, checkpoint_path, global_step=model.global_step)
+      show_progress("done\n")
+
+      perplexity = math.exp(average_perplexity) if average_perplexity < 300 else float('inf')
+      print ("global step %d learning rate %.4f perplexity "
+             "%.2f" % (model.global_step.eval(), model.learning_rate.eval(), perplexity))
+
+      # Decrease learning rate if no improvement was seen over last 3 times.
+      if len(previous_perplexities) > 2 and loss > max(previous_perplexities[-3:]):
+        sess.run(model.learning_rate_decay_op)
+      previous_perplexities.append(perplexity)
+      
+      for bucket_id in range(len(buckets)):
+        if len(valid_set[bucket_id]) == 0:
+          print("  eval: empty bucket %d" % (bucket_id))
+          continue
+        encoder_inputs, decoder_inputs, target_weights = model.get_batch(valid_set, bucket_id)
+        _, average_perplexity, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id, True)
+        eval_ppx = math.exp(average_perplexity) if average_perplexity < 300 else float('inf')
+        print("  eval: bucket %d perplexity %.2f" % (bucket_id, eval_ppx))
 
 if __name__ == '__main__':
   train()
