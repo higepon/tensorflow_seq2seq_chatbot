@@ -59,9 +59,6 @@ TWEETS_VAL_DEC_TXT = "{0}/tweets_val_dec.txt".format(config.GENERATED_DIR)
 TWEETS_VAL_ENC_IDX_TXT = "{0}/tweets_val_enc_idx.txt".format(config.GENERATED_DIR)
 TWEETS_VAL_DEC_IDX_TXT = "{0}/tweets_val_dec_idx.txt".format(config.GENERATED_DIR)
 
-VOCAB_ENC_TXT = "{0}/vocab_enc.txt".format(config.GENERATED_DIR)
-VOCAB_DEC_TXT = "{0}/vocab_dec.txt".format(config.GENERATED_DIR)
-
 DIGIT_RE = re.compile(br"\d")
 
 _PAD = b"_PAD"
@@ -241,13 +238,13 @@ if __name__ == '__main__':
   print("Done")
 
   print("Creating vocabulary files...")
-  create_vocabulary(TWEETS_ENC_TXT, VOCAB_ENC_TXT, config.MAX_ENC_VOCABULARY)
-  create_vocabulary(TWEETS_DEC_TXT, VOCAB_DEC_TXT, config.MAX_DEC_VOCABULARY)
+  create_vocabulary(TWEETS_ENC_TXT, config.VOCAB_ENC_TXT, config.MAX_ENC_VOCABULARY)
+  create_vocabulary(TWEETS_DEC_TXT, config.VOCAB_DEC_TXT, config.MAX_DEC_VOCABULARY)
   print("Done")
 
   print("Creating sentence idx files...")
-  data_to_token_ids(TWEETS_TRAIN_ENC_TXT, config.TWEETS_TRAIN_ENC_IDX_TXT, VOCAB_ENC_TXT)
-  data_to_token_ids(TWEETS_TRAIN_DEC_TXT, config.TWEETS_TRAIN_DEC_IDX_TXT, VOCAB_DEC_TXT)
-  data_to_token_ids(TWEETS_VAL_ENC_TXT, TWEETS_VAL_ENC_IDX_TXT, VOCAB_ENC_TXT)
-  data_to_token_ids(TWEETS_VAL_DEC_TXT, TWEETS_VAL_DEC_IDX_TXT, VOCAB_DEC_TXT)
+  data_to_token_ids(TWEETS_TRAIN_ENC_TXT, config.TWEETS_TRAIN_ENC_IDX_TXT, config.VOCAB_ENC_TXT)
+  data_to_token_ids(TWEETS_TRAIN_DEC_TXT, config.TWEETS_TRAIN_DEC_IDX_TXT, config.VOCAB_DEC_TXT)
+  data_to_token_ids(TWEETS_VAL_ENC_TXT, TWEETS_VAL_ENC_IDX_TXT, config.VOCAB_ENC_TXT)
+  data_to_token_ids(TWEETS_VAL_DEC_TXT, TWEETS_VAL_DEC_IDX_TXT, config.VOCAB_DEC_TXT)
   print("Done")

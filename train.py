@@ -7,6 +7,8 @@ import tensorflow as tf
 import data_processer
 import lib.seq2seq_model as seq2seq_model
 
+buckets = [(5, 10), (10, 15), (20, 25), (40, 50), (50, 60), (60, 70)]
+
 def show_progress(text):
   sys.stdout.write(text)
   sys.stdout.flush()
@@ -85,7 +87,6 @@ def train():
 
 
   with tf.Session(config=tf_config) as sess:
-    buckets = [(5, 10), (10, 15), (20, 25), (40, 50)]
 
     show_progress("Setting up data set for each buckets...")
     train_set = read_data_into_buckets(config.TWEETS_TRAIN_ENC_IDX_TXT, config.TWEETS_TRAIN_DEC_IDX_TXT, buckets)
@@ -113,14 +114,17 @@ def train():
 
       # Get batch
       encoder_inputs, decoder_inputs, target_weights = model.get_batch(train_set, bucket_id)
-      show_progress("Training bucket_id={0}...".format(bucket_id))
+#      show_progress("Training bucket_id={0}...".format(bucket_id))
 
       # Train!
       _, average_perplexity, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id, False)
-      show_progress("done {0}\n".format(average_perplexity))
+#      show_progress("done {0}\n".format(average_perplexity))
+
 
       steps = steps + 1
-      if steps % 150 != 0:
+      if steps % 100 == 0:
+        show_progress(".")
+      if steps % 1000 != 0:
         continue
 
       # check point
@@ -134,7 +138,7 @@ def train():
              "%.2f" % (model.global_step.eval(), model.learning_rate.eval(), perplexity))
 
       # Decrease learning rate if no improvement was seen over last 3 times.
-      if len(previous_perplexities) > 2 and loss > max(previous_perplexities[-3:]):
+      if len(previous_perplexities) > 2 and perplexity > max(previous_perplexities[-3:]):
         sess.run(model.learning_rate_decay_op)
       previous_perplexities.append(perplexity)
       
