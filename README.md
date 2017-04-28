@@ -20,6 +20,6 @@ Main differences of my implmentation are
 1. Talk to him!
     python predict.py
     
-# Twitter
+# Twitter Bot
 By running twitter_bot.py, you can run this chatbot in twitter.
 Here are some interesting conversations with him.
