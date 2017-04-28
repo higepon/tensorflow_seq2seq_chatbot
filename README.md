@@ -23,3 +23,4 @@ Main differences of my implmentation are
 # Twitter Bot
 By running twitter_bot.py, you can run this chatbot in twitter.
 Here are some interesting conversations with him.
+![sample1](http://cdn-ak.f.st-hatena.com/images/fotolife/h/higepon/20170428/20170428210746.jpg?1493381404)
