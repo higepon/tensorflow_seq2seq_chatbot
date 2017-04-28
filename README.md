@@ -1,5 +1,5 @@
 # What is this?
-This is seq2seq chatbot implementation. Most credit goes to [1228337123](https://github.com/1228337123/tensorflow-seq2seq-chatbot). I'm just reimplmenting their work to have better understandings on seq2seq.
+This is seq2seq chatbot implementation. Most credit goes to [1228337123](https://github.com/1228337123/tensorflow-seq2seq-chatbot). I'm just reimplmenting their work to have better understandings on seq2seq. This chat bot is optimized for Japanese. You may change replace tokenizer with one for your language.
 
 Main differences of my implmentation are
 - More comments
@@ -16,4 +16,10 @@ Main differences of my implmentation are
 1. Train! Train may take a few hours to 1 day, and it never stops. Once you think it's ready, just Ctrl-C. Model parameters are saved in generated/ directory.
 
     python train.py
-1. Try
+    
+1. Talk to him!
+    python predict.py
+    
+# Twitter
+By running twitter_bot.py, you can run this chatbot in twitter.
+Here are some interesting conversations with him.
