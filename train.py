@@ -124,7 +124,7 @@ def train():
       steps = steps + 1
       if steps % 100 == 0:
         show_progress(".")
-      if steps % 1000 != 0:
+      if steps % 5000 != 0:
         continue
 
       # check point

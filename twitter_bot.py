@@ -34,6 +34,7 @@ class StreamListener(tweepy.StreamListener):
                                            self.enc_vocab,
                                            self.rev_dec_vocab,
                                            status.text.encode('utf-8'))
+        reply_body = reply_body.replace('_UNK', '💩')
         reply_text = "@" + screen_name + " " + reply_body
         self.api.update_status(status=reply_text,
                                in_reply_to_status_id=status_id)
