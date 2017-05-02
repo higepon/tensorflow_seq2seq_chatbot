@@ -1,5 +1,5 @@
 # What is this?
-This is seq2seq chatbot implementation. Most credit goes to [1228337123](https://github.com/1228337123/tensorflow-seq2seq-chatbot). I'm just reimplmenting their work to have better understandings on seq2seq. This chat bot is optimized for Japanese. You may change replace tokenizer with one for your language.
+This is seq2seq chatbot implementation. Most credit goes to [1228337123](https://github.com/1228337123/tensorflow-seq2seq-chatbot). I'm just reimplmenting their work to have better understandings on seq2seq. This chat bot is optimized for Japanese. You may replace existing tokenizer with one for your language.
 
 Main differences of my implmentation are
 - More comments
