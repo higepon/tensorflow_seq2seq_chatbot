@@ -1,6 +1,7 @@
 import os
 import tensorflow as tf
 import train
+import datetime
 import data_processer
 import config
 import tweepy
@@ -21,23 +22,47 @@ class StreamListener(tweepy.StreamListener):
         self.model = model
         self.enc_vocab = enc_vocab
         self.rev_dec_vocab = rev_dec_vocab
+        self.last_tweet_date_time = datetime.datetime.today()
     
     def on_status(self, status):
         print("{0}: {1}".format(status.text, status.author.screen_name))
         screen_name = status.author.screen_name
+
+        # ignore my tweets
         if screen_name == self.api.me().screen_name:
             return True
-        status_id = status.id
-        # todo cleanup line
-        reply_body = predict.get_predition(self.sess,
-                                           self.model,
-                                           self.enc_vocab,
-                                           self.rev_dec_vocab,
-                                           status.text.encode('utf-8'))
-        reply_body = reply_body.replace('_UNK', '💩')
-        reply_text = "@" + screen_name + " " + reply_body
-        self.api.update_status(status=reply_text,
-                               in_reply_to_status_id=status_id)
+        if status.text.startswith("@{0}".format(self.api.me().screen_name)):
+            print("this is mention")
+            status_id = status.id            
+            reply_body = predict.get_predition(self.sess,
+                                               self.model,
+                                               self.enc_vocab,
+                                               self.rev_dec_vocab,
+                                               status.text.encode('utf-8'))
+            if reply_body is not None:
+                reply_body = reply_body.replace('_UNK', '💩')
+                reply_text = "@" + screen_name + " " + reply_body
+                self.api.update_status(status=reply_text,
+                                       in_reply_to_status_id=status_id)
+        else:
+            # Other tweets in my timeline
+
+            print("not a mention")
+            if self.last_tweet_date_time + datetime.timedelta(hours=1) < datetime.datetime.today():            
+#            if self.last_tweet_date_time + datetime.timedelta(minutes=3) < datetime.datetime.today():
+                print("time to tweet")
+                status_id = status.id            
+                reply_body = predict.get_predition(self.sess,
+                                                   self.model,
+                                                   self.enc_vocab,
+                                                   self.rev_dec_vocab,
+                                                   status.text.encode('utf-8'))
+                if reply_body is not None:                
+                    reply_text = reply_body.replace('_UNK', '💩')
+                    self.api.update_status(status=reply_text)
+                    self.last_tweet_date_time = datetime.datetime.today()
+            else:
+                print("wait a bit")
         return True
 
     def on_error(self, status_code):

@@ -6,16 +6,20 @@ import config
 import data_processer
 
 def get_predition(session, model, enc_vocab, rev_dec_vocab, text):
-  token_ids = data_processer.sentence_to_token_ids(text, enc_vocab)
-  bucket_id = min([b for b in range(len(train.buckets))
-                   if train.buckets[b][0] > len(token_ids)])
-  encoder_inputs, decoder_inputs, target_weights = model.get_batch({bucket_id: [(token_ids, [])]}, bucket_id)
-  _, _, output_logits = model.step(session, encoder_inputs, decoder_inputs,
-                                   target_weights, bucket_id, True)
-  outputs = [int(np.argmax(logit, axis=1)) for logit in output_logits]
-  if data_processer.EOS_ID in outputs:
-    outputs = outputs[:outputs.index(data_processer.EOS_ID)]
-  return "".join([tf.compat.as_str(rev_dec_vocab[output]) for output in outputs])
+  try:
+    token_ids = data_processer.sentence_to_token_ids(text, enc_vocab)
+    bucket_id = min([b for b in range(len(train.buckets))
+                     if train.buckets[b][0] > len(token_ids)])
+    encoder_inputs, decoder_inputs, target_weights = model.get_batch({bucket_id: [(token_ids, [])]}, bucket_id)
+    _, _, output_logits = model.step(session, encoder_inputs, decoder_inputs,
+                                     target_weights, bucket_id, True)
+    outputs = [int(np.argmax(logit, axis=1)) for logit in output_logits]
+    if data_processer.EOS_ID in outputs:
+      outputs = outputs[:outputs.index(data_processer.EOS_ID)]
+    return "".join([tf.compat.as_str(rev_dec_vocab[output]) for output in outputs])
+  except Exception as e:
+    print(e)
+    return None
   
 def predict():
   # Only allocate part of the gpu memory when predicting.
