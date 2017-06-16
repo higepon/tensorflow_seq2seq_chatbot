@@ -83,6 +83,7 @@ def tweet_listener():
             print("listener starting...")
             stream.userstream()
         except Exception as e:
+            print(e)
             print(e.__doc__)
 
 if __name__ == '__main__':

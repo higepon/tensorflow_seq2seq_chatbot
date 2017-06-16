@@ -7,7 +7,7 @@ import tensorflow as tf
 import data_processer
 import lib.seq2seq_model as seq2seq_model
 
-buckets = [(5, 10), (10, 15), (20, 25), (40, 50), (50, 60), (60, 70)]
+buckets = [(5, 10), (10, 15), (20, 25), (40, 50), (50, 60), (60, 70), (70, 80)]
 
 def show_progress(text):
   sys.stdout.write(text)
@@ -95,6 +95,10 @@ def train():
 
     show_progress("Creating model...")
     model = create_or_restore_model(sess, buckets, forward_only=False)
+
+#    summary_op = tf.summary.merge_all()
+#    summary_writer = tf.summary.FileWriter('/Users/higepon/Desktop/logs/', graph=sess.graph) 
+    
     show_progress("done\n")
 
     # list of # of data in ith bucket
@@ -122,9 +126,11 @@ def train():
 
 
       steps = steps + 1
-      if steps % 100 == 0:
+      if steps % 10 == 0:
+#      summary_str = sess.run(summary_op)
+#      summary_writer.add_summary(summary_str, step)
         show_progress(".")
-      if steps % 5000 != 0:
+      if steps % 500 != 0:
         continue
 
       # check point

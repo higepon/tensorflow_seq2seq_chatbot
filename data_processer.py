@@ -75,7 +75,7 @@ UNK_ID = 3
 tagger = MeCab.Tagger("-Owakati")
 
 def japanese_tokenizer(sentence):
-  result = tagger.parse(sentence)
+  result = tagger.parse(sentence.decode('utf-8'))
   return [x.encode('utf-8') for x in result.split()]
 
 def split_tweets_replies(tweets_path, enc_path, dec_path):
@@ -92,6 +92,7 @@ def split_tweets_replies(tweets_path, enc_path, dec_path):
   i = 1
   with gfile.GFile(tweets_path, mode="rb") as f, gfile.GFile(enc_path, mode="w") as ef, gfile.GFile(dec_path, mode="w") as df:
     for line in f:
+      line = line.decode('utf-8')
       # Remove @username
       line = re.sub(r"@([A-Za-z0-9_]+)", "", line)
       # Remove URL
@@ -142,7 +143,7 @@ def create_train_validation(source_path, train_path, validation_path, train_rati
 # Originally from https://github.com/1228337123/tensorflow-seq2seq-chatbot
 def sentence_to_token_ids(sentence, vocabulary, tokenizer=japanese_tokenizer, normalize_digits=True):
 
-  sentence = sentence.decode('utf-8')
+  sentence = sentence #.decode('utf-8')
   if tokenizer:
     words = tokenizer(sentence)
   else:
