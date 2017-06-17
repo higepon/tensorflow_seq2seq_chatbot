@@ -7,7 +7,6 @@ import tensorflow as tf
 import data_processer
 import lib.seq2seq_model as seq2seq_model
 
-buckets = [(5, 10), (10, 15), (20, 25), (40, 50), (50, 60), (60, 70), (70, 80)]
 
 def show_progress(text):
   sys.stdout.write(text)
@@ -89,12 +88,12 @@ def train():
   with tf.Session(config=tf_config) as sess:
 
     show_progress("Setting up data set for each buckets...")
-    train_set = read_data_into_buckets(config.TWEETS_TRAIN_ENC_IDX_TXT, config.TWEETS_TRAIN_DEC_IDX_TXT, buckets)
-    valid_set = read_data_into_buckets(config.TWEETS_VAL_ENC_IDX_TXT, config.TWEETS_VAL_DEC_IDX_TXT, buckets)
+    train_set = read_data_into_buckets(config.TWEETS_TRAIN_ENC_IDX_TXT, config.TWEETS_TRAIN_DEC_IDX_TXT, config.buckets)
+    valid_set = read_data_into_buckets(config.TWEETS_VAL_ENC_IDX_TXT, config.TWEETS_VAL_DEC_IDX_TXT, config.buckets)
     show_progress("done\n")
 
     show_progress("Creating model...")
-    model = create_or_restore_model(sess, buckets, forward_only=False)
+    model = create_or_restore_model(sess, config.buckets, forward_only=False)
 
 #    summary_op = tf.summary.merge_all()
 #    summary_writer = tf.summary.FileWriter('/Users/higepon/Desktop/logs/', graph=sess.graph) 
@@ -102,7 +101,7 @@ def train():
     show_progress("done\n")
 
     # list of # of data in ith bucket
-    train_bucket_sizes = [len(train_set[b]) for b in range(len(buckets))]
+    train_bucket_sizes = [len(train_set[b]) for b in range(len(config.buckets))]
     train_total_size = float(sum(train_bucket_sizes))
 
     # Originally from https://github.com/1228337123/tensorflow-seq2seq-chatbot
@@ -148,7 +147,7 @@ def train():
         sess.run(model.learning_rate_decay_op)
       previous_perplexities.append(perplexity)
       
-      for bucket_id in range(len(buckets)):
+      for bucket_id in range(len(config.buckets)):
         if len(valid_set[bucket_id]) == 0:
           print("  eval: empty bucket %d" % (bucket_id))
           continue

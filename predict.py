@@ -8,8 +8,8 @@ import data_processer
 def get_predition(session, model, enc_vocab, rev_dec_vocab, text):
   try:
     token_ids = data_processer.sentence_to_token_ids(text, enc_vocab)
-    bucket_id = min([b for b in range(len(train.buckets))
-                     if train.buckets[b][0] > len(token_ids)])
+    bucket_id = min([b for b in range(len(config.buckets))
+                     if config.buckets[b][0] > len(token_ids)])
     encoder_inputs, decoder_inputs, target_weights = model.get_batch({bucket_id: [(token_ids, [])]}, bucket_id)
     _, _, output_logits = model.step(session, encoder_inputs, decoder_inputs,
                                      target_weights, bucket_id, True)
@@ -28,7 +28,7 @@ def predict():
 
   with tf.Session(config=tf_config) as sess:
     train.show_progress("Creating model...")
-    model = train.create_or_restore_model(sess, train.buckets, forward_only=True)
+    model = train.create_or_restore_model(sess, config.buckets, forward_only=True)
     model.batch_size = 1
     train.show_progress("done\n")
 

@@ -44,10 +44,6 @@ from tensorflow.python.platform import gfile
 
 import sys
 
-DATA_DIR = "data"
-
-TWEETS_TXT = "{0}/tweets.txt".format(DATA_DIR)
-
 TWEETS_ENC_TXT = "{0}/tweets_enc.txt".format(config.GENERATED_DIR)
 TWEETS_DEC_TXT = "{0}/tweets_dec.txt".format(config.GENERATED_DIR)
 
@@ -75,7 +71,7 @@ UNK_ID = 3
 tagger = MeCab.Tagger("-Owakati")
 
 def japanese_tokenizer(sentence):
-  result = tagger.parse(sentence.decode('utf-8'))
+  result = tagger.parse(sentence)
   return [x.encode('utf-8') for x in result.split()]
 
 def split_tweets_replies(tweets_path, enc_path, dec_path):
@@ -90,9 +86,10 @@ def split_tweets_replies(tweets_path, enc_path, dec_path):
       None
     """
   i = 1
-  with gfile.GFile(tweets_path, mode="rb") as f, gfile.GFile(enc_path, mode="w") as ef, gfile.GFile(dec_path, mode="w") as df:
+  with gfile.GFile(tweets_path, mode="rb") as f, gfile.GFile(enc_path, mode="w+") as ef, gfile.GFile(dec_path, mode="w+") as df:
     for line in f:
-      line = line.decode('utf-8')
+      if not isinstance(line, str):
+        line = line.decode('utf-8')
       # Remove @username
       line = re.sub(r"@([A-Za-z0-9_]+)", "", line)
       # Remove URL
@@ -143,7 +140,7 @@ def create_train_validation(source_path, train_path, validation_path, train_rati
 # Originally from https://github.com/1228337123/tensorflow-seq2seq-chatbot
 def sentence_to_token_ids(sentence, vocabulary, tokenizer=japanese_tokenizer, normalize_digits=True):
 
-  sentence = sentence #.decode('utf-8')
+  sentence = sentence.decode('utf-8')
   if tokenizer:
     words = tokenizer(sentence)
   else:
@@ -230,7 +227,7 @@ def create_vocabulary(source_path, vocabulary_path, max_vocabulary_size, tokeniz
 if __name__ == '__main__':
 
   print("Splitting into tweets and replies...")
-  split_tweets_replies(TWEETS_TXT, TWEETS_ENC_TXT, TWEETS_DEC_TXT)
+  split_tweets_replies(config.TWEETS_TXT, TWEETS_ENC_TXT, TWEETS_DEC_TXT)
   print("Done")
 
   print("Splitting into train and validation data...")
