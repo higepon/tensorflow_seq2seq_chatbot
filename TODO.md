@@ -52,6 +52,7 @@ Make *fun* chatbot like human.
 - 0. beam search
 - 1. Train on multiple datasets
 - 2. Use more than just one utterance as the encoder
+  - this looks very important for tweet bot
 - 3. Make your chatbot remember information from the previous conversation
 - 4. Create a chatbot with personality
 - 5. Use character-level sequence to sequence model for the chatbot
