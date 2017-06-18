@@ -247,17 +247,18 @@ class Seq2SeqModel(object):
     if not forward_only:
       output_feed = [self.updates[bucket_id],  # Update Op that does SGD.
                      self.gradient_norms[bucket_id],  # Gradient norm.
-                     self.losses[bucket_id]]  # Loss for this batch.
+                     self.losses[bucket_id],  # Loss for this batch.
+                     self.merged_summary]  # summary for logging
     else:
       output_feed = [self.losses[bucket_id]]  # Loss for this batch.
       for l in xrange(decoder_size):  # Output logits.
         output_feed.append(self.outputs[bucket_id][l])
 
-    outputs, summary = session.run([output_feed, self.merged_summary], input_feed)
+    outputs = session.run(output_feed, input_feed)
     if not forward_only:
-      return outputs[1], outputs[2], None, summary  # Gradient norm, loss, no outputs.
+      return outputs[1], outputs[2], None, outputs[3]  # Gradient norm, loss, no outputs.
     else:
-      return None, outputs[0], outputs[1:], summary  # No gradient norm, loss, outputs.
+      return None, outputs[0], outputs[1:], None  # No gradient norm, loss, outputs.
 
   def get_batch(self, data, bucket_id):
     """Get a random batch of data from the specified bucket, prepare for step.
