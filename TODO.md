@@ -40,8 +40,8 @@ Make *fun* chatbot like human.
   - 6/18 Maybe tag or release?
   - 6/18 Think what should be done while training? Read papers?
 - 6/18 Re-read http://web.stanford.edu/class/cs20si/assignments/a3.pdf and make a list of todo again
-- Re-read seq2seq model API https://www.tensorflow.org/tutorials/seq2seq
-- Improvement 1: Support Tensorboard
+- 6/18 Re-read seq2seq model API https://www.tensorflow.org/tutorials/seq2seq
+- 6/18 Improvement 1: Support Tensorboard
 - Try AdagradOptimizer and compare hom much faster it converges
 - Check if dataset is on memory
 - Improvement 2: Construct the response in a non-greedy way
