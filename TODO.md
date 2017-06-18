@@ -39,28 +39,16 @@ Make *fun* chatbot like human.
   - 6/18 How we construct model
   - 6/18 Maybe tag or release?
   - 6/18 Think what should be done while training? Read papers?
-- Tune model
-  - Make a list of tuning points
-  - BEAM search
-  - Re-read http://web.stanford.edu/class/cs20si/assignments/a3.pdf and make a list of todo again
-- Should be able to observe learning using Tensorboard
+- 6/18 Re-read http://web.stanford.edu/class/cs20si/assignments/a3.pdf and make a list of todo again
 - Re-read seq2seq model API https://www.tensorflow.org/tutorials/seq2seq
-- Improvement plan
-- Read greedy approach in a3.pdf and make sure you understand it
-  - See if my chatbot is using it
-  - If do, have plan to improve.
-- 0. beam search
-- 1. Train on multiple datasets
-- 2. Use more than just one utterance as the encoder
-  - this looks very important for tweet bot
-- 3. Make your chatbot remember information from the previous conversation
-- 4. Create a chatbot with personality
-- 5. Use character-level sequence to sequence model for the chatbot
-- 6. Construct the response in a non-greedy way
-- 7. Create a feedback loop that allows users to train your chatbot
-- Make it work in English
-- Make it work in Japanese
-- Make tweet bot
+- Improvement 1: Support Tensorboard
+- Improvement 2: Construct the response in a non-greedy way
+- Improvement 3: Use more than just one utterance as the encoder
+- Improvement 4: Create a chatbot with personality
+- Improvement 5: Make your chatbot remember information from the previous conversation
+- Improvements todo
+  - Train on multiple datasets
+  - Create a feedback loop that allows users to train your chatbot
 - Make deploy process for tweet bot
 - Make tweet bot available in cloud
 
