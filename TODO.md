@@ -10,7 +10,7 @@ Make *fun* chatbot like human.
   - 6/11 Post it to my blog
   - 6/11 Read improvement section of her document
   - 6/11 Make improvement plan here
-- 6/17 Make old chatbot compatible with tensorflow 1.0
+- [done] 6/17 Make old chatbot compatible with tensorflow 1.0
   - 6/17 http://qiita.com/taroc/items/b9afd914432da08dafc8
   - 6/17 Run it with old seq2seq model
   - 6/17 Run it with new seq2seq model
@@ -46,6 +46,7 @@ Make *fun* chatbot like human.
 - Should be able to observe learning using Tensorboard
 - Re-read seq2seq model API https://www.tensorflow.org/tutorials/seq2seq
 - Improvement plan
+- 0. beam search
 - 1. Train on multiple datasets
 - 2. Use more than just one utterance as the encoder
 - 3. Make your chatbot remember information from the previous conversation
