@@ -67,7 +67,8 @@ class StreamListener(tweepy.StreamListener):
             print("Ignored this tweet")
             return True
 
-    def on_error(self, status_code):
+    @staticmethod
+    def on_error(status_code):
         print(status_code)
         return True
 

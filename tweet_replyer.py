@@ -78,11 +78,11 @@ def twitter_bot():
         status_id, status = tweet
         print("Processing {0}...".format(status.text))
         screen_name = status.author.screen_name        
-        reply_body = predict.get_predition(sess,
-                                           model,
-                                           enc_vocab,
-                                           rev_dec_vocab,
-                                           status.text.encode('utf-8'))
+        reply_body = predict.get_prediction(sess,
+                                            model,
+                                            enc_vocab,
+                                            rev_dec_vocab,
+                                            status.text.encode('utf-8'))
         if reply_body is None:
             print("No reply predicted")
         else:

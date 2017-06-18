@@ -5,7 +5,7 @@ import train
 import config
 import data_processer
 
-def get_predition(session, model, enc_vocab, rev_dec_vocab, text):
+def get_prediction(session, model, enc_vocab, rev_dec_vocab, text):
   try:
     token_ids = data_processer.sentence_to_token_ids(text, enc_vocab)
     bucket_id = min([b for b in range(len(config.buckets))
@@ -20,7 +20,7 @@ def get_predition(session, model, enc_vocab, rev_dec_vocab, text):
   except Exception as e:
     print(e)
     return None
-  
+
 def predict():
   # Only allocate part of the gpu memory when predicting.
   gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.2)
@@ -40,7 +40,7 @@ def predict():
     line = sys.stdin.readline()
     while line:
       line = line.encode('utf-8')
-      predicted = get_predition(sess, model, enc_vocab, rev_dec_vocab, line)
+      predicted = get_prediction(sess, model, enc_vocab, rev_dec_vocab, line)
       print(predicted)
       print("> ", end="")
       sys.stdout.flush()

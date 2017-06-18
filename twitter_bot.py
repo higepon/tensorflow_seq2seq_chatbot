@@ -34,11 +34,11 @@ class StreamListener(tweepy.StreamListener):
         if status.text.startswith("@{0}".format(self.api.me().screen_name)):
             print("this is mention")
             status_id = status.id            
-            reply_body = predict.get_predition(self.sess,
-                                               self.model,
-                                               self.enc_vocab,
-                                               self.rev_dec_vocab,
-                                               status.text.encode('utf-8'))
+            reply_body = predict.get_prediction(self.sess,
+                                                self.model,
+                                                self.enc_vocab,
+                                                self.rev_dec_vocab,
+                                                status.text.encode('utf-8'))
             if reply_body is not None:
                 reply_body = reply_body.replace('_UNK', '💩')
                 reply_text = "@" + screen_name + " " + reply_body
@@ -52,11 +52,11 @@ class StreamListener(tweepy.StreamListener):
 #            if self.last_tweet_date_time + datetime.timedelta(minutes=3) < datetime.datetime.today():
                 print("time to tweet")
                 status_id = status.id            
-                reply_body = predict.get_predition(self.sess,
-                                                   self.model,
-                                                   self.enc_vocab,
-                                                   self.rev_dec_vocab,
-                                                   status.text.encode('utf-8'))
+                reply_body = predict.get_prediction(self.sess,
+                                                    self.model,
+                                                    self.enc_vocab,
+                                                    self.rev_dec_vocab,
+                                                    status.text.encode('utf-8'))
                 if reply_body is not None:                
                     reply_text = reply_body.replace('_UNK', '💩')
                     self.api.update_status(status=reply_text)
