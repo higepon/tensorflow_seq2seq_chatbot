@@ -44,7 +44,7 @@ Make *fun* chatbot like human.
   - BEAM search
   - Re-read http://web.stanford.edu/class/cs20si/assignments/a3.pdf and make a list of todo again
 - Should be able to observe learning using Tensorboard
-- Re-read seq2seq model API
+- Re-read seq2seq model API https://www.tensorflow.org/tutorials/seq2seq
 - Improvement plan
 - 1. Train on multiple datasets
 - 2. Use more than just one utterance as the encoder
