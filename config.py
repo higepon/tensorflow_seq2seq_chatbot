@@ -1,4 +1,5 @@
 GENERATED_DIR = "/Users/higepon/Desktop/generated"
+LOGS_DIR = "/Users/higepon/Desktop/train_logs"
 
 is_fast_build = True
 

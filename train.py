@@ -113,6 +113,7 @@ def train():
         # Train Loop
         steps = 0
         previous_perplexities = []
+        writer = tf.summary.FileWriter(config.LOGS_DIR, sess.graph)
         while True:
             bucket_id = next_random_bucket_id(train_buckets_scale)
 
@@ -121,13 +122,13 @@ def train():
             #      show_progress("Training bucket_id={0}...".format(bucket_id))
 
             # Train!
-            _, average_perplexity, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id, False)
+            _, average_perplexity, _, summary = model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id, False)
             #      show_progress("done {0}\n".format(average_perplexity))
 
             steps = steps + 1
             if steps % 10 == 0:
                 #      summary_str = sess.run(summary_op)
-                #      summary_writer.add_summary(summary_str, step)
+                writer.add_summary(summary, steps)
                 show_progress(".")
             if steps % 500 != 0:
                 continue
@@ -152,7 +153,7 @@ def train():
                     print("  eval: empty bucket %d" % bucket_id)
                     continue
                 encoder_inputs, decoder_inputs, target_weights = model.get_batch(valid_set, bucket_id)
-                _, average_perplexity, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id, True)
+                _, average_perplexity, _, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id, True)
                 eval_ppx = math.exp(average_perplexity) if average_perplexity < 300 else float('inf')
                 print("  eval: bucket %d perplexity %.2f" % (bucket_id, eval_ppx))
 
