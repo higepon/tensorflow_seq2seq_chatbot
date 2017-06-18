@@ -178,10 +178,13 @@ class Seq2SeqModel(object):
           lambda x, y: seq2seq_f(x, y, False),
           softmax_loss_function=softmax_loss_function)
 
+    self.train_loss_summaries = []
     for i in range(len(self.losses)):
-        tf.summary.scalar("train_loss{}".format(i), self.losses[i])
+        self.train_loss_summaries.append(tf.summary.scalar("train_loss_bucket{}".format(i), self.losses[i]))
 
-    self.merged_summary = tf.summary.merge_all()
+    self.valid_loss_summaries = []
+    for i in range(len(self.losses)):
+        self.valid_loss_summaries.append(tf.summary.scalar("valid_loss_bucket{}".format(i), self.losses[i]))
 
     # Gradients and SGD update operation for training the model.
     params = tf.trainable_variables()
@@ -248,17 +251,17 @@ class Seq2SeqModel(object):
       output_feed = [self.updates[bucket_id],  # Update Op that does SGD.
                      self.gradient_norms[bucket_id],  # Gradient norm.
                      self.losses[bucket_id],  # Loss for this batch.
-                     self.merged_summary]  # summary for logging
+                     self.train_loss_summaries[bucket_id]]  # summary for logging
     else:
-      output_feed = [self.losses[bucket_id]]  # Loss for this batch.
+      output_feed = [self.losses[bucket_id], self.valid_loss_summaries[bucket_id]]  # Loss for this batch.
       for l in xrange(decoder_size):  # Output logits.
         output_feed.append(self.outputs[bucket_id][l])
 
     outputs = session.run(output_feed, input_feed)
     if not forward_only:
-      return outputs[1], outputs[2], None, outputs[3]  # Gradient norm, loss, no outputs.
+      return outputs[1], outputs[2], outputs[3], None  # Gradient norm, loss, summary no outputs.
     else:
-      return None, outputs[0], outputs[1:], None  # No gradient norm, loss, outputs.
+      return None, outputs[0], outputs[1], outputs[2:]  # No gradient norm, loss, outputs.
 
   def get_batch(self, data, bucket_id):
     """Get a random batch of data from the specified bucket, prepare for step.

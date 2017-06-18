@@ -14,7 +14,7 @@ if is_fast_build:
     NUM_LAYERS = 1
     LAYER_SIZE = 2
     BATCH_SIZE = 2
-    buckets = [(5, 10)]
+    buckets = [(5, 10), (8, 13)]
 else:
     MAX_ENC_VOCABULARY = 50000
     NUM_LAYERS = 3
