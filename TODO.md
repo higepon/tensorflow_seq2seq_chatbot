@@ -33,11 +33,12 @@ Make *fun* chatbot like human.
   - 6/17 Very naive implmentation with the same data as CS20SI
   - 6/17 Compare the two bots
   - 6/17 Probably rewrite it in [new seq2seq API](https://www.tensorflow.org/api_guides/python/contrib.seq2seq#Attention)
-- Find a best way to record trial and error
-  - model parameters (do we have to keep all the parameter files?)
-  - How we construct model
-  - Maybe tag or release?
-  - Think what should be done while training? Read papers?
+- 6/18 Find a best way to record trial and error
+  - 6/18 model parameters (do we have to keep all the parameter files?)
+    - Yes, with directory in tag name
+  - 6/18 How we construct model
+  - 6/18 Maybe tag or release?
+  - 6/18 Think what should be done while training? Read papers?
 - Tune model
   - Make a list of tuning points
   - BEAM search
