@@ -117,7 +117,7 @@ def train():
         writer = tf.summary.FileWriter(config.LOGS_DIR, sess.graph)
 
         while True:
-            bucket_id = random.randrange(0, 4) #next_random_bucket_id(train_buckets_scale)
+            bucket_id = next_random_bucket_id(train_buckets_scale)
 #            print(bucket_id)
 
             # Get batch
