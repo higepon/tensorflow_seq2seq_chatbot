@@ -56,3 +56,28 @@ Make *fun* chatbot like human.
 
 # random ideas
 - Can we use 2ch.net data?
+
+## tags
+### 0.0.1
+Adam optimizer and summary op work well.
+    global step 25000 learning rate 0.4522 perplexity 19.24
+    eval: bucket 0 perplexity 4.63
+    eval: bucket 1 perplexity 13.32
+    eval: bucket 2 perplexity 27.23
+    eval: bucket 3 perplexity 2.20
+    > おはようー
+    おはようございます
+    > どうなの最近？
+    これはいいの？
+    > あほか。
+    なにしwww
+    > 君の名は
+    まじでしょ？
+    > まじかよ。
+    とりあえず増えてないんですか
+    > 最近映画見た？
+    これ？
+    > いやちがうよ。それじゃないって。適当なこと言うなよ。
+    _UNKかwww
+    > うんこじゃない
+    どんな撮www
