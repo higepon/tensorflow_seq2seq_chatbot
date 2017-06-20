@@ -42,8 +42,8 @@ Make *fun* chatbot like human.
 - 6/18 Re-read http://web.stanford.edu/class/cs20si/assignments/a3.pdf and make a list of todo again
 - 6/18 Re-read seq2seq model API https://www.tensorflow.org/tutorials/seq2seq
 - 6/18 Improvement 1: Support Tensorboard
-- Try AdagradOptimizer and compare hom much faster it converges
-- Check if dataset is on memory
+- 6/19 Try AdagradOptimizer and compare hom much faster it converges
+- 6/19 Check if dataset is on memory
 - Improvement 2: Construct the response in a non-greedy way
 - Improvement 3: Use more than just one utterance as the encoder
 - Improvement 4: Create a chatbot with personality
