@@ -1,7 +1,7 @@
 GENERATED_DIR = "/Users/higepon/Desktop/generated"
 LOGS_DIR = "/Users/higepon/Desktop/train_logs"
 
-is_fast_build = True
+is_fast_build = False
 
 DATA_DIR = "data"
 if is_fast_build:
@@ -20,7 +20,7 @@ else:
     NUM_LAYERS = 3
     LAYER_SIZE = 256
     BATCH_SIZE = 64
-    buckets = [(5, 10), (10, 15), (20, 25), (40, 50), (50, 60), (60, 70), (70, 80)]
+    buckets = [(5, 10), (10, 15), (20, 25), (40, 50)]
 
 MAX_DEC_VOCABULARY = MAX_ENC_VOCABULARY
 

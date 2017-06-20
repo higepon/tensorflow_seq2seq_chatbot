@@ -2,6 +2,7 @@ import config
 import os
 import sys
 import math
+import random
 import numpy as np
 import tensorflow as tf
 import data_processer
@@ -19,10 +20,10 @@ def read_data_into_buckets(enc_path, dec_path, buckets):
     Args:
       enc_path: path to indexed tweets
       dec_path: path to indexed replies
+      buckets: list of bucket
 
     Returns:
       data_set: data_set[i] has [tweet, reply] pairs for bucket[i]
-      :param buckets:
     """
     # data_set[i] corresponds data for buckets[i]
     data_set = [[] for _ in buckets]
@@ -43,6 +44,8 @@ def read_data_into_buckets(enc_path, dec_path, buckets):
                     data_set[bucket_id].append([source_ids, target_ids])
                     break
             tweet, reply = ef.readline(), df.readline()
+    for bucket_id in range(len(buckets)):
+        print("{}={}=".format(buckets[bucket_id], len(data_set[bucket_id])))
     return data_set
 
 
@@ -96,9 +99,6 @@ def train():
         show_progress("Creating model...")
         model = create_or_restore_model(sess, config.buckets, forward_only=False)
 
-        #    summary_op = tf.summary.merge_all()
-        #    summary_writer = tf.summary.FileWriter('/Users/higepon/Desktop/logs/', graph=sess.graph)
-
         show_progress("done\n")
 
         # list of # of data in ith bucket
@@ -115,8 +115,10 @@ def train():
         steps = 0
         previous_perplexities = []
         writer = tf.summary.FileWriter(config.LOGS_DIR, sess.graph)
+
         while True:
-            bucket_id = next_random_bucket_id(train_buckets_scale)
+            bucket_id = random.randrange(0, 4) #next_random_bucket_id(train_buckets_scale)
+#            print(bucket_id)
 
             # Get batch
             encoder_inputs, decoder_inputs, target_weights = model.get_batch(train_set, bucket_id)
@@ -128,7 +130,6 @@ def train():
 
             steps = steps + 1
             if steps % 10 == 0:
-                #      summary_str = sess.run(summary_op)
                 writer.add_summary(summary, steps)
                 show_progress(".")
             if steps % 500 != 0:
