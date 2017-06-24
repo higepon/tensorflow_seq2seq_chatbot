@@ -45,6 +45,9 @@ Make *fun* chatbot like human.
 - 6/19 Try AdagradOptimizer and compare hom much faster it converges
 - 6/19 Check if dataset is on memory
 - Improvement 2: Construct the response in a non-greedy way
+  - 6/24 Understand general beam search
+  - Find actual tensorflow beam search example
+  - Make list of items to immplement
 - Improvement 3: Use more than just one utterance as the encoder
 - Improvement 4: Create a chatbot with personality
 - Improvement 5: Make your chatbot remember information from the previous conversation
