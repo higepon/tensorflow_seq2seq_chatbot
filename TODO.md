@@ -50,6 +50,7 @@ Make *fun* chatbot like human.
   - Find actual tensorflow beam search example
   - Make list of items to immplement
     - wait, maybe implment in the graph is the right way?
+    - Understand current greedy model throughly?
 - Improvement 3: Use more than just one utterance as the encoder
 - Improvement 4: Create a chatbot with personality
 - Improvement 5: Make your chatbot remember information from the previous conversation
