@@ -47,10 +47,18 @@ Make *fun* chatbot like human.
 - Improvement 2: Construct the response in a non-greedy way
   - 6/24 Understand general beam search
   - 6/25 Read wikipedia
-  - Find actual tensorflow beam search example
+  - 6/25 Find actual tensorflow beam search example
   - Make list of items to immplement
     - wait, maybe implment in the graph is the right way?
     - Understand current greedy model throughly?
+- Beam Search ToDo
+  - Understand current greedy model throughly
+  - Decide it's a right way to implment it in the model
+  - figure out how to do it
+  - Naive implementation
+  - Refactor switch between greedy and beam search  using flags
+  - Evaluate 0.0.2
+  - Merge
 - Improvement 3: Use more than just one utterance as the encoder
 - Improvement 4: Create a chatbot with personality
 - Improvement 5: Make your chatbot remember information from the previous conversation
