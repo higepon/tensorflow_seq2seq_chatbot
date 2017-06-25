@@ -46,9 +46,10 @@ Make *fun* chatbot like human.
 - 6/19 Check if dataset is on memory
 - Improvement 2: Construct the response in a non-greedy way
   - 6/24 Understand general beam search
-  - Read wikipedia
+  - 6/25 Read wikipedia
   - Find actual tensorflow beam search example
   - Make list of items to immplement
+    - wait, maybe implment in the graph is the right way?
 - Improvement 3: Use more than just one utterance as the encoder
 - Improvement 4: Create a chatbot with personality
 - Improvement 5: Make your chatbot remember information from the previous conversation
