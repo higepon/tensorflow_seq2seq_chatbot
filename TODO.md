@@ -48,11 +48,12 @@ Make *fun* chatbot like human.
   - 6/24 Understand general beam search
   - 6/25 Read wikipedia
   - 6/25 Find actual tensorflow beam search example
-  - Make list of items to immplement
-    - wait, maybe implment in the graph is the right way?
-    - Understand current greedy model throughly?
+  - 6/25 Make list of items to immplement
+    - 6/25 wait, maybe implment in the graph is the right way?
+    - 6/25 Understand current greedy model throughly?
 - Beam Search ToDo
   - Understand current greedy model throughly
+    - Do we really feed encoder input when beam search?
   - Decide it's a right way to implment it in the model
   - figure out how to do it
   - Naive implementation
