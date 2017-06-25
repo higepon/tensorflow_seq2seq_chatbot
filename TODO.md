@@ -52,6 +52,7 @@ Make *fun* chatbot like human.
     - 6/25 wait, maybe implment in the graph is the right way?
     - 6/25 Understand current greedy model throughly?
 - Beam Search ToDo
+  - Search a bit to get better understanding
   - Understand current greedy model throughly
     - Do we really feed encoder input when beam search?
   - Decide it's a right way to implment it in the model
