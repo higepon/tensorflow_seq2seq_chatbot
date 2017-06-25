@@ -57,6 +57,10 @@ Make *fun* chatbot like human.
     - Do we really feed encoder input when beam search?
   - Decide it's a right way to implment it in the model
   - figure out how to do it
+  - Will have to understand [this disucssion](https://github.com/tensorflow/tensorflow/issues/654)
+  - Examnples
+    - [demo](https://github.com/tensorflow/tensorflow/issues/654#issuecomment-168237741)
+    - [seq2seq model](https://github.com/pbhatia243/Neural_Conversation_Models)
   - Naive implementation
   - Refactor switch between greedy and beam search  using flags
   - Evaluate 0.0.2
