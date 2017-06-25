@@ -46,6 +46,7 @@ Make *fun* chatbot like human.
 - 6/19 Check if dataset is on memory
 - Improvement 2: Construct the response in a non-greedy way
   - 6/24 Understand general beam search
+  - Read wikipedia
   - Find actual tensorflow beam search example
   - Make list of items to immplement
 - Improvement 3: Use more than just one utterance as the encoder
