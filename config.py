@@ -1,7 +1,10 @@
-GENERATED_DIR = "/Users/higepon/Desktop/generated"
-LOGS_DIR = "/Users/higepon/Desktop/train_logs"
+import os
+
+GENERATED_DIR = os.getenv("HOME") + "/Desktop/generated"
+LOGS_DIR = os.getenv("HOME") + "/Desktop/train_logs"
 
 is_fast_build = False
+beam_search = True
 
 DATA_DIR = "data"
 if is_fast_build:
@@ -11,7 +14,7 @@ else:
 
 if is_fast_build:
     MAX_ENC_VOCABULARY = 5
-    NUM_LAYERS = 1
+    NUM_LAYERS = 2
     LAYER_SIZE = 2
     BATCH_SIZE = 2
     buckets = [(5, 10), (8, 13)]

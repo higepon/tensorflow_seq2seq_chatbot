@@ -50,18 +50,21 @@ def read_data_into_buckets(enc_path, dec_path, buckets):
 
 
 # Originally from https://github.com/1228337123/tensorflow-seq2seq-chatbot
-def create_or_restore_model(session, buckets, forward_only):
+def create_or_restore_model(session, buckets, forward_only, beam_search):
 
+    # beam search is off for training
     """Create model and initialize or load parameters"""
-    model = seq2seq_model.Seq2SeqModel(config.MAX_ENC_VOCABULARY,
-                                       config.MAX_DEC_VOCABULARY,
-                                       buckets,
-                                       config.LAYER_SIZE,
-                                       config.NUM_LAYERS,
-                                       config.MAX_GRADIENT_NORM,
-                                       config.BATCH_SIZE,
-                                       config.LEARNING_RATE,
-                                       config.LEARNING_RATE_DECAY_FACTOR,
+    model = seq2seq_model.Seq2SeqModel(source_vocab_size=config.MAX_ENC_VOCABULARY,
+                                       target_vocab_size=config.MAX_DEC_VOCABULARY,
+                                       buckets=buckets,
+                                       size=config.LAYER_SIZE,
+                                       num_layers=config.NUM_LAYERS,
+                                       max_gradient_norm=config.MAX_GRADIENT_NORM,
+                                       batch_size=config.BATCH_SIZE,
+                                       learning_rate=config.LEARNING_RATE,
+                                       learning_rate_decay_factor=config.LEARNING_RATE_DECAY_FACTOR,
+                                       beam_search=beam_search,
+                                       attention=True,
                                        forward_only=forward_only)
 
     print("model initialized")
@@ -97,7 +100,9 @@ def train():
         show_progress("done\n")
 
         show_progress("Creating model...")
-        model = create_or_restore_model(sess, config.buckets, forward_only=False)
+        # False for train
+        beam_search = False
+        model = create_or_restore_model(sess, config.buckets, forward_only=False, beam_search=beam_search)
 
         show_progress("done\n")
 
@@ -125,12 +130,20 @@ def train():
             #      show_progress("Training bucket_id={0}...".format(bucket_id))
 
             # Train!
-            _, average_perplexity, summary, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id, False)
+            _, average_perplexity, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights,
+                                                           bucket_id,
+                                                           forward_only=False,
+                                                           beam_search=beam_search)
+#            _, average_perplexity, ,summary, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights,
+#                                                           bucket_id,
+#                                                           forward_only=False,
+#                                                           beam_search=beam_search)
+
             #      show_progress("done {0}\n".format(average_perplexity))
 
             steps = steps + 1
             if steps % 10 == 0:
-                writer.add_summary(summary, steps)
+#                writer.add_summary(summary, steps)
                 show_progress(".")
             if steps % 500 != 0:
                 continue
@@ -155,8 +168,8 @@ def train():
                     print("  eval: empty bucket %d" % bucket_id)
                     continue
                 encoder_inputs, decoder_inputs, target_weights = model.get_batch(valid_set, bucket_id)
-                _, average_perplexity, valid_summary, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id, True)
-                writer.add_summary(valid_summary, steps)
+                _, average_perplexity, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id, True, beam_search=beam_search)
+#                writer.add_summary(valid_summary, steps)
                 eval_ppx = math.exp(average_perplexity) if average_perplexity < 300 else float('inf')
                 print("  eval: bucket %d perplexity %.2f" % (bucket_id, eval_ppx))
 

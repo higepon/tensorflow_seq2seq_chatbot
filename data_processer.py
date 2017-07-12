@@ -54,12 +54,12 @@ TWEETS_VAL_DEC_TXT = "{0}/tweets_val_dec.txt".format(config.GENERATED_DIR)
 TWEETS_VAL_ENC_IDX_TXT = "{0}/tweets_val_enc_idx.txt".format(config.GENERATED_DIR)
 TWEETS_VAL_DEC_IDX_TXT = "{0}/tweets_val_dec_idx.txt".format(config.GENERATED_DIR)
 
-DIGIT_RE = re.compile(br"\d")
+DIGIT_RE = re.compile(r"\d")
 
-_PAD = b"_PAD"
-_GO = b"_GO"
-_EOS = b"_EOS"
-_UNK = b"_UNK"
+_PAD = "_PAD"
+_GO = "_GO"
+_EOS = "_EOS"
+_UNK = "_UNK"
 _START_VOCAB = [_PAD, _GO, _EOS, _UNK]
 
 PAD_ID = 0
@@ -69,10 +69,12 @@ UNK_ID = 3
 
 tagger = MeCab.Tagger("-Owakati")
 
-
+# sentence should python string
 def japanese_tokenizer(sentence):
+    assert type(sentence) is str
+    # Mecab doesn't accept binary, but Python string (utf-8).
     result = tagger.parse(sentence)
-    return [x.encode('utf-8') for x in result.split()]
+    return result.split()
 
 
 def split_tweets_replies(tweets_path, enc_path, dec_path):
@@ -145,7 +147,6 @@ def create_train_validation(source_path, train_path, validation_path, train_rati
 
 # Originally from https://github.com/1228337123/tensorflow-seq2seq-chatbot
 def sentence_to_token_ids(sentence, vocabulary, tokenizer=japanese_tokenizer, normalize_digits=True):
-    sentence = sentence.decode('utf-8')
     if tokenizer:
         words = tokenizer(sentence)
     else:
@@ -154,7 +155,7 @@ def sentence_to_token_ids(sentence, vocabulary, tokenizer=japanese_tokenizer, no
         return [vocabulary.get(w, UNK_ID) for w in words]
     # Normalize digits by 0 before looking words up in the vocabulary.
     # return [vocabulary.get(re.sub(_DIGIT_RE, b"0", w), UNK_ID) for w in words] #mark added .decode by Ken
-    return [vocabulary.get(w.decode('utf-8'), UNK_ID) for w in words]  # added  by Ken
+    return [vocabulary.get(w, UNK_ID) for w in words]  # added  by Ken
 
 
 # Originally from https://github.com/1228337123/tensorflow-seq2seq-chatbot
@@ -167,10 +168,12 @@ def data_to_token_ids(data_path, target_path, vocabulary_path,
             with gfile.GFile(target_path, mode="wb") as tokens_file:  # edit w to wb
                 counter = 0
                 for line in data_file:
-                    line = tf.compat.as_bytes(line)  # added by Ken
+#                    line = tf.compat.as_bytes(line)  # added by Ken
                     counter += 1
                     if counter % 100000 == 0:
                         print("  tokenizing line %d" % counter)
+                    # line is binary here
+                    line = line.decode('utf-8')
                     token_ids = sentence_to_token_ids(line, vocab, tokenizer,
                                                       normalize_digits)
                     tokens_file.write(" ".join([str(tok) for tok in token_ids]) + "\n")
@@ -180,7 +183,7 @@ def data_to_token_ids(data_path, target_path, vocabulary_path,
 def initialize_vocabulary(vocabulary_path):
     if gfile.Exists(vocabulary_path):
         rev_vocab = []
-        with gfile.GFile(vocabulary_path, mode="rb") as f:
+        with gfile.GFile(vocabulary_path, mode="r") as f:
             rev_vocab.extend(f.readlines())
         rev_vocab = [line.strip() for line in rev_vocab]
         # Dictionary of (word, idx)
@@ -206,7 +209,7 @@ def create_vocabulary(source_path, vocabulary_path, max_vocabulary_size, tokeniz
     if gfile.Exists(vocabulary_path):
         print("Found vocabulary file")
         return
-    with gfile.GFile(source_path, mode="rb") as f:
+    with gfile.GFile(source_path, mode="r") as f:
         counter = 0
         vocab = {}  # (word, word_freq)
         for line in f:
@@ -217,7 +220,7 @@ def create_vocabulary(source_path, vocabulary_path, max_vocabulary_size, tokeniz
                 sys.stdout.flush()
             for word in words:
                 # Normalize numbers. Not sure if it's necessary.
-                word = re.sub(DIGIT_RE, b"0", word)
+                word = re.sub(DIGIT_RE, "0", word)
                 if word in vocab:
                     vocab[word] += 1
                 else:
@@ -225,9 +228,9 @@ def create_vocabulary(source_path, vocabulary_path, max_vocabulary_size, tokeniz
         vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
         if len(vocab_list) > max_vocabulary_size:
             vocab_list = vocab_list[:max_vocabulary_size]
-        with gfile.GFile(vocabulary_path, mode="wb") as vocab_file:
+        with gfile.GFile(vocabulary_path, mode="w") as vocab_file:
             for w in vocab_list:
-                vocab_file.write(w + b"\n")
+                vocab_file.write(w + "\n")
         print("\n")
 
 
