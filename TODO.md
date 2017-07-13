@@ -82,12 +82,12 @@ Make *fun* chatbot like human.
 ## tags
 ### 0.0.2
 beam search implemented
-
-    global step 127500 learning rate 0.2906 perplexity 1.44
-      eval: bucket 0 perplexity 2.27
-      eval: bucket 1 perplexity 2.62
-      eval: bucket 2 perplexity 6.26
-      eval: bucket 3 perplexity 1.52
+おはよう
+こんにちは
+ばいばいー
+（月曜日から）逃げちゃ駄目だ……！
+子供たちにつられて苦手なミニオンズ…(´･ω･`)w
+中華そば醤油をいただきました💕お、おいしい〜😍大盛いけたかも？
 ### 0.0.1
 Adam optimizer and summary op work well.
 
