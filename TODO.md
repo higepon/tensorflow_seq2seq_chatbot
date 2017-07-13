@@ -65,6 +65,7 @@ Make *fun* chatbot like human.
   - Refactor switch between greedy and beam search  using flags
   - Evaluate 0.0.2
   - Merge
+- Clean up tweets data, we see a lot これw
 - Improvement 3: Use more than just one utterance as the encoder
 - Improvement 4: Create a chatbot with personality
 - Improvement 5: Make your chatbot remember information from the previous conversation
