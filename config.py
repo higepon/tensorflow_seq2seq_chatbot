@@ -4,7 +4,8 @@ GENERATED_DIR = os.getenv("HOME") + "/Desktop/generated"
 LOGS_DIR = os.getenv("HOME") + "/Desktop/train_logs"
 
 is_fast_build = False
-beam_search = True
+beam_search = False
+beam_size = 10
 
 DATA_DIR = "data"
 if is_fast_build:

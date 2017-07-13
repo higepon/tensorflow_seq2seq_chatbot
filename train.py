@@ -50,10 +50,11 @@ def read_data_into_buckets(enc_path, dec_path, buckets):
 
 
 # Originally from https://github.com/1228337123/tensorflow-seq2seq-chatbot
-def create_or_restore_model(session, buckets, forward_only, beam_search):
+def create_or_restore_model(session, buckets, forward_only, beam_search, beam_size):
 
     # beam search is off for training
     """Create model and initialize or load parameters"""
+
     model = seq2seq_model.Seq2SeqModel(source_vocab_size=config.MAX_ENC_VOCABULARY,
                                        target_vocab_size=config.MAX_DEC_VOCABULARY,
                                        buckets=buckets,
@@ -65,7 +66,8 @@ def create_or_restore_model(session, buckets, forward_only, beam_search):
                                        learning_rate_decay_factor=config.LEARNING_RATE_DECAY_FACTOR,
                                        beam_search=beam_search,
                                        attention=True,
-                                       forward_only=forward_only)
+                                       forward_only=forward_only,
+                                       beam_size=beam_size)
 
     print("model initialized")
     ckpt = tf.train.get_checkpoint_state(config.GENERATED_DIR)
@@ -102,7 +104,7 @@ def train():
         show_progress("Creating model...")
         # False for train
         beam_search = False
-        model = create_or_restore_model(sess, config.buckets, forward_only=False, beam_search=beam_search)
+        model = create_or_restore_model(sess, config.buckets, forward_only=False, beam_search=beam_search, beam_size=config.beam_size)
 
         show_progress("done\n")
 
