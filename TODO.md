@@ -78,6 +78,13 @@ Make *fun* chatbot like human.
 - Can we use 2ch.net data?
 
 ## tags
+### 0.0.2
+beam search implemented
+    global step 127500 learning rate 0.2906 perplexity 1.44
+      eval: bucket 0 perplexity 2.27
+      eval: bucket 1 perplexity 2.62
+      eval: bucket 2 perplexity 6.26
+      eval: bucket 3 perplexity 1.52
 ### 0.0.1
 Adam optimizer and summary op work well.
     global step 25000 learning rate 0.4522 perplexity 19.24
