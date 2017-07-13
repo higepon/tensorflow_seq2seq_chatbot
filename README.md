@@ -1,9 +1,13 @@
 # What is this?
 This is seq2seq chatbot implementation. Most credit goes to [1228337123](https://github.com/1228337123/tensorflow-seq2seq-chatbot). I'm just reimplmenting their work to have better understandings on seq2seq. This chat bot is optimized for Japanese. You may replace existing tokenizer with one for your language.
 
-Main differences of my implmentation are
+Main differences of my implementation are
 - More comments
 - Easy to understand input/output format for each processes
+
+# Requirements
+- Python 3.6
+- Tensorflow 1.1.0
 
 # How to run
 1. Prepare train data.

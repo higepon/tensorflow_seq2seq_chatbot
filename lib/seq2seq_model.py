@@ -1,23 +1,6 @@
-# Copyright 2015 The TensorFlow Authors. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ==============================================================================
 
 """Sequence-to-sequence model with an attention mechanism."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import random
 
@@ -25,8 +8,8 @@ import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
-import lib.data_utils as data_utils
-
+from  lib.data_utils import *
+from lib.my_seq2seq import *
 
 class Seq2SeqModel(object):
   """Sequence-to-sequence model with attention and for multiple buckets.
@@ -43,20 +26,10 @@ class Seq2SeqModel(object):
     http://arxiv.org/abs/1412.2007
   """
 
-  def __init__(self,
-               source_vocab_size,
-               target_vocab_size,
-               buckets,
-               size,
-               num_layers,
-               max_gradient_norm,
-               batch_size,
-               learning_rate,
-               learning_rate_decay_factor,
-               use_lstm=False,
-               num_samples=512,
-               forward_only=False,
-               dtype=tf.float32):
+  def __init__(self, source_vocab_size, target_vocab_size, buckets, size,
+               num_layers, max_gradient_norm, batch_size, learning_rate,
+               learning_rate_decay_factor, use_lstm=False,
+               num_samples=1024, forward_only=False, beam_search = True, beam_size=10, attention=True):
     """Create the model.
 
     Args:
@@ -78,14 +51,12 @@ class Seq2SeqModel(object):
       use_lstm: if true, we use LSTM cells instead of GRU cells.
       num_samples: number of samples for sampled softmax.
       forward_only: if set, we do not construct the backward pass in the model.
-      dtype: the data type to use to store internal variables.
     """
     self.source_vocab_size = source_vocab_size
     self.target_vocab_size = target_vocab_size
     self.buckets = buckets
     self.batch_size = batch_size
-    self.learning_rate = tf.Variable(
-        float(learning_rate), trainable=False, dtype=dtype)
+    self.learning_rate = tf.Variable(float(learning_rate), trainable=False)
     self.learning_rate_decay_op = self.learning_rate.assign(
         self.learning_rate * learning_rate_decay_factor)
     self.global_step = tf.Variable(0, trainable=False)
@@ -94,52 +65,60 @@ class Seq2SeqModel(object):
     output_projection = None
     softmax_loss_function = None
     # Sampled softmax only makes sense if we sample less than vocabulary size.
-    if 0 < num_samples < self.target_vocab_size:
-      w_t = tf.get_variable("proj_w", [self.target_vocab_size, size], dtype=dtype)
-      w = tf.transpose(w_t)
-      b = tf.get_variable("proj_b", [self.target_vocab_size], dtype=dtype)
+    if num_samples > 0 and num_samples < self.target_vocab_size:
+      with tf.device("/cpu:0"):
+        w = tf.get_variable("proj_w", [size, self.target_vocab_size])
+        w_t = tf.transpose(w)
+        b = tf.get_variable("proj_b", [self.target_vocab_size])
       output_projection = (w, b)
 
-      def sampled_loss(labels, logits):
-        labels = tf.reshape(labels, [-1, 1])
-        # We need to compute the sampled_softmax_loss using 32bit floats to
-        # avoid numerical instabilities.
-        local_w_t = tf.cast(w_t, tf.float32)
-        local_b = tf.cast(b, tf.float32)
-        local_inputs = tf.cast(logits, tf.float32)
-        return tf.cast(
-            tf.nn.sampled_softmax_loss(
-                weights=local_w_t,
-                biases=local_b,
-                labels=labels,
-                inputs=local_inputs,
-                num_sampled=num_samples,
-                num_classes=self.target_vocab_size),
-            dtype)
+      def sampled_loss(inputs, labels):
+        with tf.device("/cpu:0"):
+          labels = tf.reshape(labels, [-1, 1])
+          return tf.nn.sampled_softmax_loss(w_t, b, labels, inputs, num_samples,
+                                            self.target_vocab_size)
       softmax_loss_function = sampled_loss
-
     # Create the internal multi-layer cell for our RNN.
-    def single_cell():
-      return tf.contrib.rnn.GRUCell(size)
+    print('###### tf.get_variable_scope().reuse : {}'.format(tf.get_variable_scope().reuse))
+    def gru_cell():
+      return tf.contrib.rnn.core_rnn_cell.GRUCell(size, reuse=tf.get_variable_scope().reuse)#tf.get_variable_scope().reuse
+    def lstm_cell():
+      return tf.contrib.rnn.core_rnn_cell.BasicLSTMCell(size, reuse=tf.get_variable_scope().reuse)#tf.get_variable_scope().reuse
+    single_cell = gru_cell
     if use_lstm:
-      def single_cell():
-        return tf.contrib.rnn.BasicLSTMCell(size)
+      single_cell = lstm_cell
     cell = single_cell()
     if num_layers > 1:
-      cell = tf.contrib.rnn.MultiRNNCell([single_cell() for _ in range(num_layers)])
+      cell_1 = tf.contrib.rnn.core_rnn_cell.MultiRNNCell([single_cell() for _ in range(num_layers)], state_is_tuple=False)
+      cell_2 = tf.contrib.rnn.core_rnn_cell.MultiRNNCell([single_cell() for _ in range(num_layers)], state_is_tuple=False)
 
     # The seq2seq function: we use embedding for the input and attention.
+    print('##### num_layers: {} #####'.format(num_layers))
+    print('##### {} #####'.format(output_projection))
     def seq2seq_f(encoder_inputs, decoder_inputs, do_decode):
-      return tf.contrib.legacy_seq2seq.embedding_attention_seq2seq(
-          encoder_inputs,
-          decoder_inputs,
-          cell,
-          num_encoder_symbols=source_vocab_size,
-          num_decoder_symbols=target_vocab_size,
-          embedding_size=size,
-          output_projection=output_projection,
-          feed_previous=do_decode,
-          dtype=dtype)
+        if attention:
+            print("Attention Model")
+            return embedding_attention_seq2seq(
+               encoder_inputs, decoder_inputs, cell_1, cell_2,
+               num_encoder_symbols=source_vocab_size,
+               num_decoder_symbols=target_vocab_size,
+               embedding_size=size,
+               output_projection=output_projection,
+               feed_previous=do_decode,
+               beam_search=beam_search,
+               beam_size=beam_size )
+        else:
+            print("Simple Model")
+            return embedding_rnn_seq2seq(
+              encoder_inputs, decoder_inputs, cell,
+              num_encoder_symbols=source_vocab_size,
+              num_decoder_symbols=target_vocab_size,
+              embedding_size=size,
+              output_projection=output_projection,
+              feed_previous=do_decode,
+              beam_search=beam_search,
+              beam_size=beam_size )
+
 
     # Feeds for inputs.
     self.encoder_inputs = []
@@ -151,7 +130,7 @@ class Seq2SeqModel(object):
     for i in xrange(buckets[-1][1] + 1):
       self.decoder_inputs.append(tf.placeholder(tf.int32, shape=[None],
                                                 name="decoder{0}".format(i)))
-      self.target_weights.append(tf.placeholder(dtype, shape=[None],
+      self.target_weights.append(tf.placeholder(tf.float32, shape=[None],
                                                 name="weight{0}".format(i)))
 
     # Our targets are decoder inputs shifted by one.
@@ -160,40 +139,39 @@ class Seq2SeqModel(object):
 
     # Training outputs and losses.
     if forward_only:
-      self.outputs, self.losses = tf.contrib.legacy_seq2seq.model_with_buckets(
-          self.encoder_inputs, self.decoder_inputs, targets,
-          self.target_weights, buckets, lambda x, y: seq2seq_f(x, y, True),
-          softmax_loss_function=softmax_loss_function)
-      # If we use output projection, we need to project outputs for decoding.
-      if output_projection is not None:
-        for b in xrange(len(buckets)):
-          self.outputs[b] = [
-              tf.matmul(output, output_projection[0]) + output_projection[1]
-              for output in self.outputs[b]
-          ]
+        if beam_search:
+              self.outputs, self.beam_path, self.beam_symbol = decode_model_with_buckets(
+                  self.encoder_inputs, self.decoder_inputs, targets,
+                  self.target_weights, buckets, lambda x, y: seq2seq_f(x, y, True),
+                  softmax_loss_function=softmax_loss_function)
+        else:
+              # print self.decoder_inputs
+              self.outputs, self.losses = model_with_buckets(
+                  self.encoder_inputs, self.decoder_inputs, targets,
+                  self.target_weights, buckets, lambda x, y: seq2seq_f(x, y, True),
+                  softmax_loss_function=softmax_loss_function)
+              # If we use output projection, we need to project outputs for decoding.
+              if output_projection is not None:
+                    for b in xrange(len(buckets)):
+                      self.outputs[b] = [
+                          tf.matmul(output, output_projection[0]) + output_projection[1]
+                          for output in self.outputs[b]
+                      ]
+
+
     else:
-      self.outputs, self.losses = tf.contrib.legacy_seq2seq.model_with_buckets(
+      self.outputs, self.losses = model_with_buckets(
           self.encoder_inputs, self.decoder_inputs, targets,
           self.target_weights, buckets,
           lambda x, y: seq2seq_f(x, y, False),
           softmax_loss_function=softmax_loss_function)
-
-    self.train_loss_summaries = []
-    for i in range(len(self.losses)):
-        self.train_loss_summaries.append(tf.summary.scalar("train_loss_bucket{}".format(i), self.losses[i]))
-
-    self.valid_loss_summaries = []
-    for i in range(len(self.losses)):
-        self.valid_loss_summaries.append(tf.summary.scalar("valid_loss_bucket{}".format(i), self.losses[i]))
 
     # Gradients and SGD update operation for training the model.
     params = tf.trainable_variables()
     if not forward_only:
       self.gradient_norms = []
       self.updates = []
-      opt = tf.train.AdamOptimizer(1e-4)
-      #opt = tf.train.GradientDescentOptimizer(self.learning_rate)
-
+      opt = tf.train.GradientDescentOptimizer(self.learning_rate)
       for b in xrange(len(buckets)):
         gradients = tf.gradients(self.losses[b], params)
         clipped_gradients, norm = tf.clip_by_global_norm(gradients,
@@ -205,7 +183,7 @@ class Seq2SeqModel(object):
     self.saver = tf.train.Saver(tf.global_variables())
 
   def step(self, session, encoder_inputs, decoder_inputs, target_weights,
-           bucket_id, forward_only):
+           bucket_id, forward_only, beam_search):
     """Run a step of the model feeding the given inputs.
 
     Args:
@@ -252,18 +230,25 @@ class Seq2SeqModel(object):
     if not forward_only:
       output_feed = [self.updates[bucket_id],  # Update Op that does SGD.
                      self.gradient_norms[bucket_id],  # Gradient norm.
-                     self.losses[bucket_id],  # Loss for this batch.
-                     self.train_loss_summaries[bucket_id]]  # summary for logging
+                     self.losses[bucket_id]]  # Loss for this batch.
     else:
-      output_feed = [self.losses[bucket_id], self.valid_loss_summaries[bucket_id]]  # Loss for this batch.
-      for l in xrange(decoder_size):  # Output logits.
-        output_feed.append(self.outputs[bucket_id][l])
+        if beam_search:
+              output_feed = [self.beam_path[bucket_id]]  # Loss for this batch.
+              output_feed.append(self.beam_symbol[bucket_id])
+        else:
+            output_feed = [self.losses[bucket_id]]
 
+        for l in xrange(decoder_size):  # Output logits.
+            output_feed.append(self.outputs[bucket_id][l])
+    # print bucket_id
     outputs = session.run(output_feed, input_feed)
     if not forward_only:
-      return outputs[1], outputs[2], outputs[3], None  # Gradient norm, loss, summary no outputs.
+      return outputs[1], outputs[2], None  # Gradient norm, loss, no outputs.
     else:
-      return None, outputs[0], outputs[1], outputs[2:]  # No gradient norm, loss, outputs.
+      if beam_search:
+          return outputs[0], outputs[1], outputs[2:]  # No gradient norm, loss, outputs.
+      else:
+          return None, outputs[0], outputs[1:]  # No gradient norm, loss, outputs.
 
   def get_batch(self, data, bucket_id):
     """Get a random batch of data from the specified bucket, prepare for step.
@@ -290,13 +275,13 @@ class Seq2SeqModel(object):
       encoder_input, decoder_input = random.choice(data[bucket_id])
 
       # Encoder inputs are padded and then reversed.
-      encoder_pad = [data_utils.PAD_ID] * (encoder_size - len(encoder_input))
+      encoder_pad = [PAD_ID] * (encoder_size - len(encoder_input))
       encoder_inputs.append(list(reversed(encoder_input + encoder_pad)))
 
       # Decoder inputs get an extra "GO" symbol, and are padded then.
       decoder_pad_size = decoder_size - len(decoder_input) - 1
-      decoder_inputs.append([data_utils.GO_ID] + decoder_input +
-                            [data_utils.PAD_ID] * decoder_pad_size)
+      decoder_inputs.append([GO_ID] + decoder_input +
+                            [PAD_ID] * decoder_pad_size)
 
     # Now we create batch-major vectors from the data selected above.
     batch_encoder_inputs, batch_decoder_inputs, batch_weights = [], [], []
@@ -320,7 +305,7 @@ class Seq2SeqModel(object):
         # The corresponding target is decoder_input shifted by 1 forward.
         if length_idx < decoder_size - 1:
           target = decoder_inputs[batch_idx][length_idx + 1]
-        if length_idx == decoder_size - 1 or target == data_utils.PAD_ID:
+        if length_idx == decoder_size - 1 or target == PAD_ID:
           batch_weight[batch_idx] = 0.0
       batch_weights.append(batch_weight)
     return batch_encoder_inputs, batch_decoder_inputs, batch_weights
