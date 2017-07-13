@@ -81,7 +81,8 @@ Make *fun* chatbot like human.
 
 ## tags
 ### 0.0.2
-beam search implemented
+beam search implemented.
+
     >おはよう
     normal:おはようございます
     beam
