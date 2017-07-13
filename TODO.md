@@ -83,11 +83,20 @@ Make *fun* chatbot like human.
 ### 0.0.2
 beam search implemented
 おはよう
+おはようございます
 こんにちは
+はい(˘ω˘)
 ばいばいー
+わろきちってんじゃんwww
+
 （月曜日から）逃げちゃ駄目だ……！
+えぇこれは、、、
+
 子供たちにつられて苦手なミニオンズ…(´･ω･`)w
+気をしてねー(˘ω˘)
+
 中華そば醤油をいただきました💕お、おいしい〜😍大盛いけたかも？
+追加ですよねwww
 ### 0.0.1
 Adam optimizer and summary op work well.
 
