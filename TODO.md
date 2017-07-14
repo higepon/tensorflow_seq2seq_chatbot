@@ -6,6 +6,7 @@ Make *fun* chatbot like human.
 - __done__ beam search
 - read https://arxiv.org/abs/1609.08144
 - read https://arxiv.org/abs/1611.04558
+- read [this pdf](http://2boy.org/~yuta/publications/neural-dialog-model-kanto-mt-20170714.pdf)
 - Clean up tweets data, we see a lot これw
 - Get 5M data
 - [A] Improvement 3: Use more than just one utterance as the encoder
