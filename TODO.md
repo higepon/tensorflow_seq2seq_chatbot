@@ -1,21 +1,9 @@
 # Goal
 Make *fun* chatbot like human.
 # TODO
-- [done] Understand how CS20SI chatbot works
-  - 6/11 read her documents
-  - 6/11 train
-  - 6/11 chat
-  - 6/11 draw its model structure
-    - didn't draw, but here is pretty similar one
-  - 6/11 Post it to my blog
-  - 6/11 Read improvement section of her document
-  - 6/11 Make improvement plan here
+- __done__ 6/11 [Understand how CS20SI chatbot works](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Understand-how-CS20SI-chatbot-works)
+- __done__ 6/17 [Make old chatbot compatible with tensorflow 1.0](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Make-old-chatbot-compatible-with-tensorflow-1.0)
 - [done] 6/17 Make old chatbot compatible with tensorflow 1.0
-  - 6/17 http://qiita.com/taroc/items/b9afd914432da08dafc8
-  - 6/17 Run it with old seq2seq model
-  - 6/17 Run it with new seq2seq model
-  - 6/17 train with very small data
-  - 6/17 predict
 - Make basic chatbot
   - 6/11 Prepare pycharm env with python 3.3 and latest TensorFlow
   - 6/12 Port data.py to Python3
