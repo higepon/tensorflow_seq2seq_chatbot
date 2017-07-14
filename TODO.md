@@ -4,6 +4,8 @@ Make *fun* chatbot like human.
 - __done__ 6/11 [Understand how CS20SI chatbot works](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Understand-how-CS20SI-chatbot-works)
 - __done__ 6/17 [Make old chatbot compatible with tensorflow 1.0](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Make-old-chatbot-compatible-with-tensorflow-1.0)
 - __done__ beam search
+- read https://arxiv.org/abs/1609.08144
+- read https://arxiv.org/abs/1611.04558
 - Clean up tweets data, we see a lot これw
 - Get 5M data
 - [A] Improvement 3: Use more than just one utterance as the encoder
