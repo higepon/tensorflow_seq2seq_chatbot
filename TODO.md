@@ -5,9 +5,12 @@ Make *fun* chatbot like human.
 - __done__ 6/17 [Make old chatbot compatible with tensorflow 1.0](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Make-old-chatbot-compatible-with-tensorflow-1.0)
 - __done__ beam search
 - Clean up tweets data, we see a lot これw
-- Improvement 3: Use more than just one utterance as the encoder
+- [A] Improvement 3: Use more than just one utterance as the encoder
+   - Check if tweet collector get one more deep conversation
+   - collect
 - Improvement 4: Create a chatbot with personality
-- Improvement 5: Make your chatbot remember information from the previous conversation
+- [B] Improvement 5: Make your chatbot remember information from the previous conversation
+   - can we simpley train with 1 pair?
 - Improvements todo
   - Train on multiple datasets
   - Create a feedback loop that allows users to train your chatbot
