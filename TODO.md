@@ -6,7 +6,7 @@ Make *fun* chatbot like human.
 - __done__ beam search
 - read https://arxiv.org/abs/1609.08144
 - read https://arxiv.org/abs/1611.04558
-- read [this pdf](http://2boy.org/~yuta/publications/neural-dialog-model-kanto-mt-20170714.pdf)
+- __done__ read [this pdf](http://2boy.org/~yuta/publications/neural-dialog-model-kanto-mt-20170714.pdf)
 - __done__ read [tensorflow/nmt: TensorFlow Neural Machine Translation Tutorial](https://github.com/tensorflow/nmt)
 - Revisit GNMT once it's stablized.
 - checkout news API [Release TensorFlow 1.2.0 · tensorflow/tensorflow](https://github.com/tensorflow/tensorflow/releases/tag/v1.2.0)
