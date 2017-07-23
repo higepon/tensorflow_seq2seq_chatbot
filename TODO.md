@@ -19,6 +19,7 @@ Make *fun* chatbot like human.
    - __done__ collect
 - see if the data text above works well
 - train the bot with above
+- set up only bot somehow
 - Improvement 4: Create a chatbot with personality
 - [B] Improvement 5: Make your chatbot remember information from the previous conversation
    - can we simpley train with 1 pair?
