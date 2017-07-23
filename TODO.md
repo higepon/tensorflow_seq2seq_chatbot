@@ -14,9 +14,10 @@ Make *fun* chatbot like human.
   - __done__ write a script which remove spam tweets
   - __done__ add column to the db is_spam.
 - Get 5M data
-- [A] Improvement 3: Use more than just one utterance as the encoder
-   - Check if tweet collector get one more deep conversation
-   - collect
+- __done__ [A] Improvement 3: Use more than just one utterance as the encoder
+   - __done__ Check if tweet collector get one more deep conversation
+   - __done__ collect
+- train the bot with above
 - Improvement 4: Create a chatbot with personality
 - [B] Improvement 5: Make your chatbot remember information from the previous conversation
    - can we simpley train with 1 pair?
