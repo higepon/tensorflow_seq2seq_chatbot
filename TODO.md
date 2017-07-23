@@ -10,9 +10,9 @@ Make *fun* chatbot like human.
 - __done__ read [tensorflow/nmt: TensorFlow Neural Machine Translation Tutorial](https://github.com/tensorflow/nmt)
 - Revisit GNMT once it's stablized.
 - checkout news API [Release TensorFlow 1.2.0 · tensorflow/tensorflow](https://github.com/tensorflow/tensorflow/releases/tag/v1.2.0)
-- Clean up tweets data, we see a lot これw
-  - write a script which remove spam tweets
-  - add column to the db is_spam.
+- __done__ Clean up tweets data, we see a lot これw
+  - __done__ write a script which remove spam tweets
+  - __done__ add column to the db is_spam.
 - Get 5M data
 - [A] Improvement 3: Use more than just one utterance as the encoder
    - Check if tweet collector get one more deep conversation
