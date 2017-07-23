@@ -18,6 +18,8 @@ Make *fun* chatbot like human.
    - __done__ Check if tweet collector get one more deep conversation
    - __done__ collect
 - see if the data text above works well
+- set up FreeBSD
+- greedy get tweets
 - train the bot with above
 - set up only bot somehow
 - Improvement 4: Create a chatbot with personality
