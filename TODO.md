@@ -18,7 +18,7 @@ Make *fun* chatbot like human.
    - __done__ Check if tweet collector get one more deep conversation
    - __done__ collect
 - see if the data text above works well
-- set up FreeBSD
+- [Install tensorflow FreeBSD · higepon/tensorflow_seq2seq_chatbot Wiki](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Install-tensorflow-FreeBSD)
 - greedy get tweets
 - train the bot with above
 - set up only bot somehow
