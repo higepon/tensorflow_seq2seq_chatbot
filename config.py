@@ -2,11 +2,11 @@ import os
 from sys import platform
 
 if platform == 'linux':
-    GENERATED_DIR = os.getenv("HOME") + "/prod/generated"
-    LOGS_DIR = os.getenv("HOME") + "/prod/train_logs"
+    GENERATED_DIR = os.getenv("HOME") + "/chatbot_generated"
+    LOGS_DIR = os.getenv("HOME") + "/chatbot_train_logs"
 else:
-    GENERATED_DIR = os.getenv("HOME") + "/Desktop/generated"
-    LOGS_DIR = os.getenv("HOME") + "/Desktop/train_logs"
+    GENERATED_DIR = os.getenv("HOME") + "/chatbot_generated"
+    LOGS_DIR = os.getenv("HOME") + "/chatbot_train_logs"
 
 is_fast_build = False
 beam_search = False
