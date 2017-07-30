@@ -67,7 +67,7 @@ def twitter_bot():
   api = tweepy.API(auth)
   with tf.Session(config=tf_config) as sess:
     train.show_progress("Creating model...")
-    model = train.create_or_restore_model(sess, config.buckets, forward_only=True, beam_search=False, beam_size=10)
+    model = train.create_or_restore_model(sess, config.buckets, forward_only=True, beam_search=True, beam_size=10)
     model.batch_size = 1
     train.show_progress("done\n")
 
@@ -78,11 +78,14 @@ def twitter_bot():
         status_id, status = tweet
         print("Processing {0}...".format(status.text))
         screen_name = status.author.screen_name        
-        reply_body = predict.get_prediction(sess,
-                                            model,
-                                            enc_vocab,
-                                            rev_dec_vocab,
-                                            status.text)
+#        reply_body = predict.get_prediction(sess,
+#                                            model,
+#                                            enc_vocab,
+#                                            rev_dec_vocab,
+#                                            status.text)
+        reply_bodies = predict.get_beam_serch_prediction(sess,model, enc_vocab, rev_dec_vocab, status.text)
+        reply_body = reply_bodies[0]
+
         if reply_body is None:
             print("No reply predicted")
         else:
