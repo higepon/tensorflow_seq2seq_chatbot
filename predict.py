@@ -75,6 +75,26 @@ def get_beam_serch_prediction(session, model, enc_vocab, rev_dec_vocab, text):
             ret.append(rec)
     return ret
 
+
+class EasyPredictor:
+    def __init__(self, session):
+        self.session = session
+        train.show_progress("Creating model...")
+        self.model = train.create_or_restore_model(self.session, config.buckets, forward_only=True, beam_search=config.beam_search, beam_size=config.beam_size)
+        self.model.batch_size = 1
+        train.show_progress("done\n")
+        self.enc_vocab, _ = data_processer.initialize_vocabulary(config.VOCAB_ENC_TXT)
+        _, self.rev_dec_vocab = data_processer.initialize_vocabulary(config.VOCAB_DEC_TXT)
+
+    def predict(self, text):
+        if config.beam_search:
+            replies = get_beam_serch_prediction(self.session, self.model, self.enc_vocab, self.rev_dec_vocab, text)
+            return replies
+        else:
+            reply = get_prediction(self.session, self.model, self.enc_vocab, self.rev_dec_vocab, text)
+            return [reply]
+
+
 def predict():
     # Only allocate part of the gpu memory when predicting.
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.2)
@@ -82,27 +102,15 @@ def predict():
 
     with tf.Session(config=tf_config) as sess:
 
-        train.show_progress("Creating model...")
-        model = train.create_or_restore_model(sess, config.buckets, forward_only=True, beam_search=config.beam_search, beam_size=40)
-        model.batch_size = 1
-        train.show_progress("done\n")
-
-        enc_vocab, _ = data_processer.initialize_vocabulary(config.VOCAB_ENC_TXT)
-        _, rev_dec_vocab = data_processer.initialize_vocabulary(config.VOCAB_DEC_TXT)
+        predictor = EasyPredictor(sess)
 
         sys.stdout.write("> ")
         sys.stdout.flush()
         line = sys.stdin.readline()
         while line:
-            if config.beam_search:
-                print("beam")
-                replies = get_beam_serch_prediction(sess, model, enc_vocab, rev_dec_vocab, line)
-                for i, text in enumerate(replies):
-                    print(i, text)
-            else:
-                print("normal")
-                predicted = get_prediction(sess, model, enc_vocab, rev_dec_vocab, line)
-                print(predicted)
+            replies = predictor.predict(line)
+            for i, text in enumerate(replies):
+                print(i, text)
             print("> ", end="")
             sys.stdout.flush()
             line = sys.stdin.readline()

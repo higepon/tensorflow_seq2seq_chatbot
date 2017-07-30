@@ -66,28 +66,15 @@ def twitter_bot():
   auth.set_access_token(access_token, access_token_secret)
   api = tweepy.API(auth)
   with tf.Session(config=tf_config) as sess:
-    train.show_progress("Creating model...")
 
-    model = train.create_or_restore_model(sess, config.buckets, forward_only=True, beam_search=config.beam_search, beam_size=config.beam_size)
-    model.batch_size = 1
-    train.show_progress("done\n")
-
-    enc_vocab, _ = data_processer.initialize_vocabulary(config.VOCAB_ENC_TXT)
-    _, rev_dec_vocab = data_processer.initialize_vocabulary(config.VOCAB_DEC_TXT)
+    predictor = predict.EasyPredictor(sess)
 
     for tweet in tweets():
         status_id, status = tweet
         print("Processing {0}...".format(status.text))
-        screen_name = status.author.screen_name        
-#        reply_body = predict.get_prediction(sess,
-#                                            model,
-#                                            enc_vocab,
-#                                            rev_dec_vocab,
-#                                            status.text)
-
-        reply_bodies = predict.get_beam_serch_prediction(sess, model, enc_vocab, rev_dec_vocab, status.text)
-        reply_body = reply_bodies[0]
-
+        screen_name = status.author.screen_name
+        replies = predictor.predict(status.text)
+        reply_body = replies[0]
         if reply_body is None:
             print("No reply predicted")
         else:
