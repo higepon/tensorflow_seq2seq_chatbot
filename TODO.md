@@ -24,6 +24,7 @@ Make *fun* chatbot like human.
 - __done__ greedy get tweets
 - __done__ train the bot with above
 - __done__ set up only bot somehow
+- Stop using bio it affects bucket distirbution and too biased to bio
 - Improvement 4: Create a chatbot with personality
 - [B] Improvement 5: Make your chatbot remember information from the previous conversation
    - can we simpley train with 1 pair?
