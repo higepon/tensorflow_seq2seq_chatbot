@@ -82,7 +82,7 @@ def twitter_bot():
                                             model,
                                             enc_vocab,
                                             rev_dec_vocab,
-                                            status.text.encode('utf-8'))
+                                            status.text)
         if reply_body is None:
             print("No reply predicted")
         else:
