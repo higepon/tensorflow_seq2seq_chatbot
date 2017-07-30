@@ -9,8 +9,8 @@ else:
     LOGS_DIR = os.getenv("HOME") + "/chatbot_train_logs"
 
 is_fast_build = False
-beam_search = False
-beam_size = 10
+beam_search = True
+beam_size = 20
 
 DATA_DIR = "data"
 if is_fast_build:
