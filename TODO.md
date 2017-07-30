@@ -17,13 +17,13 @@ Make *fun* chatbot like human.
 - __done__ [A] Improvement 3: Use more than just one utterance as the encoder
    - __done__ Check if tweet collector get one more deep conversation
    - __done__ collect
-- 0.0.3 tag with commit
-  - deploy script
+- __done__ 7/30 0.0.3 tag with commit
+  - __done__ 7/30 deploy script
 - see if the data text above works well
-- [Install tensorflow FreeBSD · higepon/tensorflow_seq2seq_chatbot Wiki](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Install-tensorflow-FreeBSD)
-- greedy get tweets
-- train the bot with above
-- set up only bot somehow
+- __done__ 7/30[Install tensorflow FreeBSD · higepon/tensorflow_seq2seq_chatbot Wiki](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Install-tensorflow-FreeBSD)
+- __done__ greedy get tweets
+- __done__ train the bot with above
+- __done__ set up only bot somehow
 - Improvement 4: Create a chatbot with personality
 - [B] Improvement 5: Make your chatbot remember information from the previous conversation
    - can we simpley train with 1 pair?
