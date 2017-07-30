@@ -68,7 +68,7 @@ def twitter_bot():
   with tf.Session(config=tf_config) as sess:
     train.show_progress("Creating model...")
 
-    model = train.create_or_restore_model(sess, config.buckets, forward_only=True, beam_search=config.beam_search, beam_size=10)
+    model = train.create_or_restore_model(sess, config.buckets, forward_only=True, beam_search=config.beam_search, beam_size=config.beam_size)
     model.batch_size = 1
     train.show_progress("done\n")
 
