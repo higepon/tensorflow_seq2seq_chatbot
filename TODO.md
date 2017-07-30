@@ -37,6 +37,10 @@ Make *fun* chatbot like human.
 - Can we use 2ch.net data?
 
 ## tags
+### 0.0.3
+Refactoring and make sure tweet bot is working.
+Actually now the bot is working in vps (Ubuntu).
+
 ### 0.0.2
 beam search implemented.
 
