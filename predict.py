@@ -40,8 +40,12 @@ def get_prediction(session, model, enc_vocab, rev_dec_vocab, text):
 
 def get_beam_serch_prediction(session, model, enc_vocab, rev_dec_vocab, text):
     token_ids = data_processer.sentence_to_token_ids(text, enc_vocab)
-    bucket_id = min([b for b in range(len(config.buckets))
-                     if config.buckets[b][0] > len(token_ids)])
+    target_buckets = [b for b in range(len(config.buckets))
+                      if config.buckets[b][0] > len(token_ids)]
+    if not target_buckets:
+        return []
+
+    bucket_id = min(target_buckets)
     encoder_inputs, decoder_inputs, target_weights = model.get_batch({bucket_id: [(token_ids, [])]}, bucket_id)
 
     path, symbol, output_logits = model.step(session, encoder_inputs, decoder_inputs,
