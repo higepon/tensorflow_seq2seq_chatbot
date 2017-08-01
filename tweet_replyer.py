@@ -74,6 +74,9 @@ def twitter_bot():
         print("Processing {0}...".format(status.text))
         screen_name = status.author.screen_name
         replies = predictor.predict(status.text)
+        if not replies:
+            print("no reply")
+            continue
         reply_body = replies[0]
         if reply_body is None:
             print("No reply predicted")

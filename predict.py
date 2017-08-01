@@ -39,7 +39,11 @@ def get_prediction(session, model, enc_vocab, rev_dec_vocab, text):
 
 
 def get_beam_serch_prediction(session, model, enc_vocab, rev_dec_vocab, text):
-    token_ids = data_processer.sentence_to_token_ids(text, enc_vocab)
+    max_len = config.buckets[-1][0]
+    target_text = text
+    if len(text) > max_len:
+        target_text = text[:max_len]
+    token_ids = data_processer.sentence_to_token_ids(target_text, enc_vocab)
     target_buckets = [b for b in range(len(config.buckets))
                       if config.buckets[b][0] > len(token_ids)]
     if not target_buckets:
