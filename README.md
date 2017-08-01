@@ -22,6 +22,7 @@ Main differences of my implementation are
     python train.py
     
 1. Talk to him!
+    
     python predict.py
     
 # Twitter Bot
