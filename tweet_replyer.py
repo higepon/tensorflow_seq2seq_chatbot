@@ -1,9 +1,5 @@
 import os
 import tensorflow as tf
-import train
-import datetime
-import data_processer
-import config
 import tweepy
 import time
 import predict
@@ -17,31 +13,16 @@ access_token_secret = os.getenv("access_token_secret")
 
 DB_NAME = 'tweets.db'
 
-def create_tables():
-    conn = sqlite3.connect(DB_NAME)
-    sql = 'create table tweets(sid integer primary key, data blob not null, processed integer not null default 0)'
-    c = conn.cursor()
-    c.execute(sql)
-    conn.close()
-
-def insert_tweet(status_id, tweet):
-    conn = sqlite3.connect(DB_NAME)
-    binary_data = pickle.dumps(mention, pickle.HIGHEST_PROTOCOL)
-    c = conn.cursor()
-    sqlite3.Binary(binary_data)
-    c.execute("insert into tweets (sid, data) values (?, ?)", [status_id, sqlite3.Binary(binary_data)])
-    conn.commit()
-    conn.close()
-
 def select_next_tweet():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("select sid, data from tweets where processed = 0")
+    c.execute("select sid, data, bot_flag from tweets where processed = 0")
     for row in c:
         sid = row[0]
         data = pickle.loads(row[1])
-        return sid, data
-    return None, None
+        bot_flag = row[2]
+        return sid, data, bot_flag
+    return None, None, None
 
 def mark_tweet_processed(status_id):
     conn = sqlite3.connect(DB_NAME)
@@ -52,9 +33,9 @@ def mark_tweet_processed(status_id):
 
 def tweets():
     while True:
-        status_id, tweet = select_next_tweet()
+        status_id, tweet, bot_flag = select_next_tweet()
         if status_id is not None:
-            yield(status_id, tweet)
+            yield(status_id, tweet, bot_flag)
         time.sleep(1)
 
 def twitter_bot():
@@ -70,7 +51,7 @@ def twitter_bot():
     predictor = predict.EasyPredictor(sess)
 
     for tweet in tweets():
-        status_id, status = tweet
+        status_id, status, bot_flag = tweet
         print("Processing {0}...".format(status.text))
         screen_name = status.author.screen_name
         replies = predictor.predict(status.text)
@@ -82,10 +63,15 @@ def twitter_bot():
             print("No reply predicted")
         else:
             reply_body = reply_body.replace('_UNK', '💩')
-            reply_text = "@" + screen_name + " " + reply_body
-            print("Reply:{0}".format(reply_text))
-            api.update_status(status=reply_text,
-                              in_reply_to_status_id=status_id)
+            if bot_flag == 1:
+                reply_text = reply_body
+                print("My Tweet:{0}".format(reply_text))
+                api.update_status(status=reply_text)
+            else:
+                reply_text = "@" + screen_name + " " + reply_body
+                print("Reply:{0}".format(reply_text))
+                api.update_status(status=reply_text,
+                                  in_reply_to_status_id=status_id)
         mark_tweet_processed(status_id)
 
 if __name__ == '__main__':

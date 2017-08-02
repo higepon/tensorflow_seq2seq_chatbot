@@ -13,23 +13,27 @@ def create_tables():
     conn.commit()
     conn.close()
 
-def insert_tweet(status_id, tweet):
+# alter table tweets add column bot_flag integer NOT NULL default 0;
+
+
+def insert_tweet(status_id, tweet, bot_flag=0):
     conn = sqlite3.connect(DB_NAME)
     binary_data = pickle.dumps(tweet, pickle.HIGHEST_PROTOCOL)
     c = conn.cursor()
-    c.execute("insert into tweets (sid, data) values (?, ?)", [status_id, sqlite3.Binary(binary_data)])
+    c.execute("insert into tweets (sid, data, bot_flag) values (?, ?, ?)", [status_id, sqlite3.Binary(binary_data), bot_flag])
     conn.commit()
     conn.close()
 
 def select_next_tweet():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("select sid, data from tweets where processed = 0")
+    c.execute("select sid, data, bot_flag from tweets where processed = 0")
     for row in c:
         print(row)
         sid = row[0]
         data = pickle.loads(row[1])
-        return sid, data
+        bot_flag = row[2]
+        return sid, data, bot_flag
     return None, None
 
 def mark_tweet_processed(status_id):
@@ -49,6 +53,7 @@ class myExeption(Exception): pass
 class StreamListener(tweepy.StreamListener):
     def __init__(self, api):
         self.api = api
+        self.once = False
 
     def on_status(self, status):
         print("{0}: {1}".format(status.text, status.author.screen_name))
@@ -64,6 +69,10 @@ class StreamListener(tweepy.StreamListener):
             insert_tweet(status.id, status)
             return True
         else:
+            if not self.once:
+                print("Saving normal tweet as seed")
+                self.once = True
+                insert_tweet(status.id, status, bot_flag=1)
             print("Ignored this tweet")
             return True
 
