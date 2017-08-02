@@ -4,8 +4,8 @@ Make *fun* chatbot like human.
 - __done__ 6/11 [Understand how CS20SI chatbot works](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Understand-how-CS20SI-chatbot-works)
 - __done__ 6/17 [Make old chatbot compatible with tensorflow 1.0](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Make-old-chatbot-compatible-with-tensorflow-1.0)
 - __done__ beam search
-- read https://arxiv.org/abs/1609.08144
-- read https://arxiv.org/abs/1611.04558
+- __done__ read https://arxiv.org/abs/1609.08144
+- __done__ read https://arxiv.org/abs/1611.04558
 - __done__ read [this pdf](http://2boy.org/~yuta/publications/neural-dialog-model-kanto-mt-20170714.pdf)
 - __done__ read [tensorflow/nmt: TensorFlow Neural Machine Translation Tutorial](https://github.com/tensorflow/nmt)
 - Revisit GNMT once it's stablized.
@@ -31,9 +31,13 @@ Make *fun* chatbot like human.
 - Improvements todo
   - Train on multiple datasets
   - Create a feedback loop that allows users to train your chatbot
-- Make deploy process for tweet bot
-- Make tweet bot available in cloud
-
+- __done__ Make deploy process for tweet bot
+- __done__ Make tweet bot available in cloud
+- [Make your chatbot remember information · higepon/tensorflow_seq2seq_chatbot Wiki](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Make-your-chatbot-remember-information)
+- tweet something based on 
+  - someone's tweet
+  - news?
+  - maybe 3 times a day
 # random ideas
 - Can we use 2ch.net data?
 
