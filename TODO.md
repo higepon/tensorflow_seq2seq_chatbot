@@ -33,7 +33,11 @@ Make *fun* chatbot like human.
   - Create a feedback loop that allows users to train your chatbot
 - __done__ Make deploy process for tweet bot
 - __done__ Make tweet bot available in cloud
-
+- [Make your chatbot remember information · higepon/tensorflow_seq2seq_chatbot Wiki](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Make-your-chatbot-remember-information)
+- tweet something based on 
+  - someone's tweet
+  - news?
+  - maybe 3 times a day
 # random ideas
 - Can we use 2ch.net data?
 
