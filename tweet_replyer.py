@@ -68,13 +68,15 @@ def twitter_bot():
                 if bot_flag == 1:
                     reply_text = reply_body
                     print("My Tweet:{0}".format(reply_text))
-                    if reply_text:
-                        api.update_status(status=reply_text)
+                    if not reply_text:
+                        reply_text = "😺(適切なお返事が生成できませんでした"
+                    api.update_status(status=reply_text)
                 else:
-                    if reply_body:
-                        reply_text = "@" + screen_name + " " + reply_body
-                        print("Reply:{0}".format(reply_text))
-                        api.update_status(status=reply_text,
+                    if not reply_body:
+                        reply_body = "😺(適切なお返事が生成できませんでした"
+                    reply_text = "@" + screen_name + " " + reply_body
+                    print("Reply:{0}".format(reply_text))
+                    api.update_status(status=reply_text,
                                       in_reply_to_status_id=status_id)
             mark_tweet_processed(status_id)
 
