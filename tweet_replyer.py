@@ -36,6 +36,23 @@ def tweets():
         time.sleep(1)
 
 
+def post_reply(api, bot_flag, reply_body, screen_name, status_id):
+    reply_body = reply_body.replace('_UNK', '💩')
+    if bot_flag == tweet_listener.SHOULD_TWEET:
+        reply_text = reply_body
+        print("My Tweet:{0}".format(reply_text))
+        if not reply_text:
+            reply_text = "😺(適切なお返事が生成できませんでした)"
+        api.update_status(status=reply_text)
+    else:
+        if not reply_body:
+            reply_body = "😺(適切なお返事が生成できませんでした)"
+        reply_text = "@" + screen_name + " " + reply_body
+        print("Reply:{0}".format(reply_text))
+        api.update_status(status=reply_text,
+                          in_reply_to_status_id=status_id)
+
+
 def twitter_bot():
     # Only allocate part of the gpu memory when predicting.
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.2)
@@ -65,29 +82,15 @@ def twitter_bot():
                 print("No reply predicted")
             else:
                 try:
-                    reply_body = reply_body.replace('_UNK', '💩')
-                    if bot_flag == 1:
-                        reply_text = reply_body
-                        print("My Tweet:{0}".format(reply_text))
-                        if not reply_text:
-                            reply_text = "😺(適切なお返事が生成できませんでした"
-                        api.update_status(status=reply_text)
-                    else:
-                        if not reply_body:
-                            reply_body = "😺(適切なお返事が生成できませんでした"
-                        reply_text = "@" + screen_name + " " + reply_body
-                        print("Reply:{0}".format(reply_text))
-                        api.update_status(status=reply_text,
-                                          in_reply_to_status_id=status_id)
+                    post_reply(api, bot_flag, reply_body, screen_name, status_id)
                 except tweepy.TweepError as e:
                     # duplicate status
                     if e.api_code == 187:
                         pass
                     else:
                         raise
-
-
             mark_tweet_processed(status_id)
+
 
 if __name__ == '__main__':
     twitter_bot()

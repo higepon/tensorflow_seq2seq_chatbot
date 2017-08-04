@@ -5,6 +5,8 @@ import tweepy
 from datetime import datetime, timedelta
 
 DB_NAME = 'tweets.db'
+SHOULD_TWEET = 1
+
 
 
 def create_tables():
@@ -48,7 +50,7 @@ class StreamListener(tweepy.StreamListener):
             if self.next_tweet_time < datetime.today():
                 print("Saving normal tweet as seed")
                 self.next_tweet_time = self.get_next_tweet_time()
-                insert_tweet(status.id, status, bot_flag=1)
+                insert_tweet(status.id, status, bot_flag=SHOULD_TWEET)
             print("Ignored this tweet")
             return True
 
