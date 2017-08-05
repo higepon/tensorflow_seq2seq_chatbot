@@ -31,6 +31,7 @@ Make *fun* chatbot like human.
 - Improvements todo
   - Train on multiple datasets
   - Create a feedback loop that allows users to train your chatbot
+  - __here__ How can I have the bot tweet something interesting.
 - __done__ Make deploy process for tweet bot
 - __done__ Make tweet bot available in cloud
 - [Make your chatbot remember information · higepon/tensorflow_seq2seq_chatbot Wiki](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Make-your-chatbot-remember-information)
