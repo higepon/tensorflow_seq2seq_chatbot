@@ -56,7 +56,7 @@ class StreamListener(tweepy.StreamListener):
 
     @staticmethod
     def get_next_tweet_time():
-        return datetime.today() + timedelta(hours=2)
+        return datetime.today() + timedelta(hours=4)
 
     @staticmethod
     def on_error(status_code):
