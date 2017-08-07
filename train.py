@@ -132,20 +132,20 @@ def train():
             #      show_progress("Training bucket_id={0}...".format(bucket_id))
 
             # Train!
-            _, average_perplexity, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights,
-                                                           bucket_id,
-                                                           forward_only=False,
-                                                           beam_search=beam_search)
-#            _, average_perplexity, ,summary, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights,
+#            _, average_perplexity, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights,
 #                                                           bucket_id,
 #                                                           forward_only=False,
 #                                                           beam_search=beam_search)
+            _, average_perplexity, summary, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights,
+                                                           bucket_id,
+                                                           forward_only=False,
+                                                           beam_search=beam_search)
 
             #      show_progress("done {0}\n".format(average_perplexity))
 
             steps = steps + 1
             if steps % 10 == 0:
-#                writer.add_summary(summary, steps)
+                writer.add_summary(summary, steps)
                 show_progress(".")
             if steps % 500 != 0:
                 continue
@@ -170,8 +170,9 @@ def train():
                     print("  eval: empty bucket %d" % bucket_id)
                     continue
                 encoder_inputs, decoder_inputs, target_weights = model.get_batch(valid_set, bucket_id)
-                _, average_perplexity, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id, True, beam_search=beam_search)
-#                writer.add_summary(valid_summary, steps)
+#                _, average_perplexity, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id, True, beam_search=beam_search)
+                _, average_perplexity, valid_summary, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id, True, beam_search=beam_search)
+                writer.add_summary(valid_summary, steps)
                 eval_ppx = math.exp(average_perplexity) if average_perplexity < 300 else float('inf')
                 print("  eval: bucket %d perplexity %.2f" % (bucket_id, eval_ppx))
 

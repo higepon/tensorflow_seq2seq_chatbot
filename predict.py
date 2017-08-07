@@ -75,7 +75,7 @@ def get_beam_serch_prediction(session, model, enc_vocab, rev_dec_vocab, text):
         if data_processer.EOS_ID in foutputs:
             #         # print outputs
             foutputs = foutputs[:foutputs.index(data_processer.EOS_ID)]
-        rec = " ".join([tf.compat.as_str(rev_dec_vocab[output]) for output in foutputs])
+        rec = "".join([tf.compat.as_str(rev_dec_vocab[output]) for output in foutputs])
         if rec not in recos:
             recos.add(rec)
 #            print("reply {}".format(i))
