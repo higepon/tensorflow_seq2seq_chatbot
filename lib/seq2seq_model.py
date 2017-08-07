@@ -140,6 +140,7 @@ class Seq2SeqModel(object):
     # Training outputs and losses.
     if forward_only:
         if beam_search:
+              self.losses = []
               self.outputs, self.beam_path, self.beam_symbol = decode_model_with_buckets(
                   self.encoder_inputs, self.decoder_inputs, targets,
                   self.target_weights, buckets, lambda x, y: seq2seq_f(x, y, True),
