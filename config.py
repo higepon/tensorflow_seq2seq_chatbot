@@ -27,8 +27,8 @@ if is_fast_build:
 else:
     MAX_ENC_VOCABULARY = 50000
     NUM_LAYERS = 3
-    LAYER_SIZE = 256
-    BATCH_SIZE = 64
+    LAYER_SIZE = 1024
+    BATCH_SIZE = 128
     buckets = [(5, 10), (10, 15), (20, 25), (40, 50)]
 
 MAX_DEC_VOCABULARY = MAX_ENC_VOCABULARY

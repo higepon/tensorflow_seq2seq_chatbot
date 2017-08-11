@@ -90,11 +90,12 @@ def next_random_bucket_id(buckets_scale):
 
 def train():
     # Only allocate 2/3 of the gpu memory to allow for running gpu-based predictions while training:
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.666)
-    tf_config = tf.ConfigProto(gpu_options=gpu_options)
-    tf_config.gpu_options.allocator_type = 'BFC'
+#    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.666)
+#    tf_config = tf.ConfigProto(gpu_options=gpu_options)
+#    tf_config.gpu_options.allocator_type = 'BFC'
 
-    with tf.Session(config=tf_config) as sess:
+    #with tf.Session(config=tf_config) as sess:
+    with tf.Session() as sess:
 
         show_progress("Setting up data set for each buckets...")
         train_set = read_data_into_buckets(config.TWEETS_TRAIN_ENC_IDX_TXT, config.TWEETS_TRAIN_DEC_IDX_TXT, config.buckets)
@@ -144,10 +145,10 @@ def train():
             #      show_progress("done {0}\n".format(average_perplexity))
 
             steps = steps + 1
-            if steps % 10 == 0:
+            if steps % 2 == 0:
                 writer.add_summary(summary, steps)
                 show_progress(".")
-            if steps % 500 != 0:
+            if steps % 50 != 0:
                 continue
 
             # check point

@@ -37,16 +37,19 @@ def tweets():
 
 
 def post_reply(api, bot_flag, reply_body, screen_name, status_id):
+    unk_count = reply_body.count('_UNK')
     reply_body = reply_body.replace('_UNK', '💩')
     if bot_flag == tweet_listener.SHOULD_TWEET:
+        if unk_count > 0:
+            return
         reply_text = reply_body
         print("My Tweet:{0}".format(reply_text))
         if not reply_text:
-            reply_text = "😺(適切なお返事が生成できませんでした)"
+            return
         api.update_status(status=reply_text)
     else:
         if not reply_body:
-            reply_body = "😺(適切なお返事が生成できませんでした)"
+            reply_body = "🐶(適切なお返事が生成できませんでした)"
         reply_text = "@" + screen_name + " " + reply_body
         print("Reply:{0}".format(reply_text))
         api.update_status(status=reply_text,
