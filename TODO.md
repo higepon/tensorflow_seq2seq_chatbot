@@ -39,6 +39,7 @@ Make *fun* chatbot like human.
   - someone's tweet
   - news?
   - maybe 3 times a day
+- __here__: changed it to 3 layers of 1024 (rather than 3 layers of 256) see https://github.com/tensorflow/tensorflow/issues/550
 # random ideas
 - Can we use 2ch.net data?
 
