@@ -38,11 +38,15 @@ class QueueListener(StreamListener):
         return True
 
     def on_status(self, status):
-        replies = self.predictor.predict(status['text'])
+        if 'retweeted_status' in status:
+            return True
+        text = status['text']
+        replies = self.predictor.predict(text)
         if not replies:
             return True
         reply_body = replies[0]
-        print(status['text'])
+        text = text.replace('\n', ' ')
+        print(text)
         print("reply:{}".format(reply_body))
         return True
 

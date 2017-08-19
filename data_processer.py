@@ -69,7 +69,7 @@ UNK_ID = 3
 
 tagger = MeCab.Tagger("-Owakati")
 
-# sentence should python string
+
 def japanese_tokenizer(sentence):
     assert type(sentence) is str
     # Mecab doesn't accept binary, but Python string (utf-8).
@@ -94,10 +94,7 @@ def split_tweets_replies(tweets_path, enc_path, dec_path):
         for line in f:
             if not isinstance(line, str):
                 line = line.decode('utf-8')
-            # Remove @username
-            line = re.sub(r"@([A-Za-z0-9_]+)", "", line)
-            # Remove URL
-            line = re.sub(r'https?:\/\/.*', "", line)
+            line = sanitize_line(line)
 
             # Odd lines are tweets
             if i % 2 == 1:
@@ -106,6 +103,15 @@ def split_tweets_replies(tweets_path, enc_path, dec_path):
             else:
                 df.write(line)
             i = i + 1
+
+
+def sanitize_line(line):
+    # Remove @username
+    line = re.sub(r"@([A-Za-z0-9_]+)", "", line)
+    # Remove URL
+    line = re.sub(r'https?:\/\/.*', "", line)
+    line = re.sub(DIGIT_RE, "0", line)
+    return line
 
 
 def num_lines(file):

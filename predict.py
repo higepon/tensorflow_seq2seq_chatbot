@@ -95,6 +95,8 @@ class EasyPredictor:
         _, self.rev_dec_vocab = data_processer.initialize_vocabulary(config.VOCAB_DEC_TXT)
 
     def predict(self, text):
+        text = text.replace('\n', ' ')
+        text = data_processer.sanitize_line(text)
         if config.beam_search:
             replies = get_beam_serch_prediction(self.session, self.model, self.enc_vocab, self.rev_dec_vocab, text)
             return replies
