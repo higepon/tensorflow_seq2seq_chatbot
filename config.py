@@ -5,7 +5,7 @@ if platform == 'linux':
     GENERATED_DIR = os.getenv("HOME") + "/chatbot_generated"
     LOGS_DIR = os.getenv("HOME") + "/chatbot_train_logs"
 else:
-    GENERATED_DIR = os.getenv("HOME") + "/chatbot_generated"
+    GENERATED_DIR = os.getenv("HOME") + "/Dropbox/tensorflow_seq2seq_chatbot/chatbot_generated"
     LOGS_DIR = os.getenv("HOME") + "/chatbot_train_logs"
 
 is_fast_build = False
