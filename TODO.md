@@ -19,8 +19,9 @@ Make *fun* chatbot like human.
   - someone's tweet
   - news?
   - maybe 3 times a day
-- __here__: changed it to 3 layers of 1024 (rather than 3 layers of 256) see https://github.com/tensorflow/tensorflow/issues/550
+- changed it to 3 layers of 1024 (rather than 3 layers of 256) see https://github.com/tensorflow/tensorflow/issues/550
 - [In my seq2seq chatbot, I'm seeing many general replies like Thank you, lol, this is it or yes. Even for train inputs, outputs are generic and not interesting. How can I debug seq2seq output? - Quora](https://www.quora.com/unanswered/In-my-seq2seq-chatbot-Im-seeing-many-general-replies-like-Thank-you-lol-this-is-it-or-yes-Even-for-train-inputs-outputs-are-generic-and-not-interesting-How-can-I-debug-seq2seq-output)
+- __here__: Read https://arxiv.org/pdf/1606.01541.pdf 
 # random ideas
 - Can we use 2ch.net data?
 
