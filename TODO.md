@@ -1,29 +1,11 @@
 # Goal
 Make *fun* chatbot like human.
 # TODO
-- __done__ 6/11 [Understand how CS20SI chatbot works](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Understand-how-CS20SI-chatbot-works)
-- __done__ 6/17 [Make old chatbot compatible with tensorflow 1.0](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Make-old-chatbot-compatible-with-tensorflow-1.0)
-- __done__ beam search
-- __done__ read https://arxiv.org/abs/1609.08144
-- __done__ read https://arxiv.org/abs/1611.04558
-- __done__ read [this pdf](http://2boy.org/~yuta/publications/neural-dialog-model-kanto-mt-20170714.pdf)
-- __done__ read [tensorflow/nmt: TensorFlow Neural Machine Translation Tutorial](https://github.com/tensorflow/nmt)
+
 - Revisit GNMT once it's stablized.
 - checkout news API [Release TensorFlow 1.2.0 · tensorflow/tensorflow](https://github.com/tensorflow/tensorflow/releases/tag/v1.2.0)
-- __done__ Clean up tweets data, we see a lot これw
-  - __done__ write a script which remove spam tweets
-  - __done__ add column to the db is_spam.
 - Get 5M data
-- __done__ [A] Improvement 3: Use more than just one utterance as the encoder
-   - __done__ Check if tweet collector get one more deep conversation
-   - __done__ collect
-- __done__ 7/30 0.0.3 tag with commit
-  - __done__ 7/30 deploy script
 - see if the data text above works well
-- __done__ 7/30[Install tensorflow FreeBSD · higepon/tensorflow_seq2seq_chatbot Wiki](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Install-tensorflow-FreeBSD)
-- __done__ greedy get tweets
-- __done__ train the bot with above
-- __done__ set up only bot somehow
 - Stop using bio it affects bucket distirbution and too biased to bio
 - Improvement 4: Create a chatbot with personality
 - [B] Improvement 5: Make your chatbot remember information from the previous conversation
@@ -32,17 +14,38 @@ Make *fun* chatbot like human.
   - Train on multiple datasets
   - Create a feedback loop that allows users to train your chatbot
   - __here__ How can I have the bot tweet something interesting.
-- __done__ Make deploy process for tweet bot
-- __done__ Make tweet bot available in cloud
 - [Make your chatbot remember information · higepon/tensorflow_seq2seq_chatbot Wiki](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Make-your-chatbot-remember-information)
 - tweet something based on 
   - someone's tweet
   - news?
   - maybe 3 times a day
 - __here__: changed it to 3 layers of 1024 (rather than 3 layers of 256) see https://github.com/tensorflow/tensorflow/issues/550
+- [In my seq2seq chatbot, I'm seeing many general replies like Thank you, lol, this is it or yes. Even for train inputs, outputs are generic and not interesting. How can I debug seq2seq output? - Quora](https://www.quora.com/unanswered/In-my-seq2seq-chatbot-Im-seeing-many-general-replies-like-Thank-you-lol-this-is-it-or-yes-Even-for-train-inputs-outputs-are-generic-and-not-interesting-How-can-I-debug-seq2seq-output)
 # random ideas
 - Can we use 2ch.net data?
 
+# Done
+- __done__ 6/11 [Understand how CS20SI chatbot works](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Understand-how-CS20SI-chatbot-works)
+- __done__ 6/17 [Make old chatbot compatible with tensorflow 1.0](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Make-old-chatbot-compatible-with-tensorflow-1.0)
+- __done__ beam search
+- __done__ read https://arxiv.org/abs/1609.08144
+- __done__ read https://arxiv.org/abs/1611.04558
+- __done__ read [this pdf](http://2boy.org/~yuta/publications/neural-dialog-model-kanto-mt-20170714.pdf)
+- __done__ read [tensorflow/nmt: TensorFlow Neural Machine Translation Tutorial](https://github.com/tensorflow/nmt)
+- __done__ 7/30[Install tensorflow FreeBSD · higepon/tensorflow_seq2seq_chatbot Wiki](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Install-tensorflow-FreeBSD)
+- __done__ greedy get tweets
+- __done__ train the bot with above
+- __done__ set up only bot somehow
+- __done__ [A] Improvement 3: Use more than just one utterance as the encoder
+   - __done__ Check if tweet collector get one more deep conversation
+   - __done__ collect
+- __done__ 7/30 0.0.3 tag with commit
+  - __done__ 7/30 deploy script
+- __done__ Clean up tweets data, we see a lot これw
+  - __done__ write a script which remove spam tweets
+  - __done__ add column to the db is_spam.
+- __done__ Make deploy process for tweet bot
+- __done__ Make tweet bot available in cloud
 ## tags
 ### 0.0.3
 Refactoring and make sure tweet bot is working.
