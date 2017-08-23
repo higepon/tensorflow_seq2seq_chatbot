@@ -13,7 +13,7 @@ Make *fun* chatbot like human.
 - Improvements todo
   - Train on multiple datasets
   - Create a feedback loop that allows users to train your chatbot
-  - __here__ How can I have the bot tweet something interesting.
+  - How can I have the bot tweet something interesting.
 - [Make your chatbot remember information · higepon/tensorflow_seq2seq_chatbot Wiki](https://github.com/higepon/tensorflow_seq2seq_chatbot/wiki/Make-your-chatbot-remember-information)
 - tweet something based on 
   - someone's tweet
@@ -22,6 +22,7 @@ Make *fun* chatbot like human.
 - changed it to 3 layers of 1024 (rather than 3 layers of 256) see https://github.com/tensorflow/tensorflow/issues/550
 - [In my seq2seq chatbot, I'm seeing many general replies like Thank you, lol, this is it or yes. Even for train inputs, outputs are generic and not interesting. How can I debug seq2seq output? - Quora](https://www.quora.com/unanswered/In-my-seq2seq-chatbot-Im-seeing-many-general-replies-like-Thank-you-lol-this-is-it-or-yes-Even-for-train-inputs-outputs-are-generic-and-not-interesting-How-can-I-debug-seq2seq-output)
 - __here__: Read https://arxiv.org/pdf/1606.01541.pdf 
+  - 8/23 super summary
 # random ideas
 - Can we use 2ch.net data?
 
