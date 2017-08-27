@@ -25,6 +25,7 @@ Make *fun* chatbot like human.
    - related papers
       - Deep Reinforcement Learning for Dialogue Generation
         - __done__ 8/27 The paper above
+        - __done__ ref impl: [liuyuemaicha/Deep-Reinforcement-Learning-for-Dialogue-Generation-in-tensorflow: Deep-Reinforcement-Learning-for-Dialogue-Generation-in-tensorflow](https://github.com/liuyuemaicha/Deep-Reinforcement-Learning-for-Dialogue-Generation-in-tensorflow)
       - Building end-to-end dialogue systems using generative hierar- chical neural network models. 
         - __done__ 8/27 Useless for our case?
       - A diversity-promoting objective function for neural conversation models. 
