@@ -31,6 +31,7 @@ Make *fun* chatbot like human.
       - A diversity-promoting objective function for neural conversation models. (87)
        - __done__ 8/27 Pernalize generic response
         - __done__ 8/27 ref impl [pender/chatbot-rnn: A toy chatbot powered by deep learning and trained on data from Reddit](https://github.com/pender/chatbot-rnn)
+- 8/17 I'll implement Deep Reinforcement Learning for Dialogue Generation, because it's is newer version from the same author
 
   - 8/23 super summary
 # random ideas
