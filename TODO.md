@@ -24,6 +24,8 @@ Make *fun* chatbot like human.
 - __here__: Read https://arxiv.org/pdf/1606.01541.pdf 
    - related papers
       - Deep Reinforcement Learning for Dialogue Generation
+      - Building end-to-end dialogue systems using generative hierar- chical neural network models. 
+      - A diversity-promoting objective function for neural conversation models. 
 
   - 8/23 super summary
 # random ideas
