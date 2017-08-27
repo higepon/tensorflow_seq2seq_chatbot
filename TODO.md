@@ -23,13 +23,13 @@ Make *fun* chatbot like human.
 - [In my seq2seq chatbot, I'm seeing many general replies like Thank you, lol, this is it or yes. Even for train inputs, outputs are generic and not interesting. How can I debug seq2seq output? - Quora](https://www.quora.com/unanswered/In-my-seq2seq-chatbot-Im-seeing-many-general-replies-like-Thank-you-lol-this-is-it-or-yes-Even-for-train-inputs-outputs-are-generic-and-not-interesting-How-can-I-debug-seq2seq-output)
 - __here__: Read https://arxiv.org/pdf/1606.01541.pdf 
    - related papers
-      - Deep Reinforcement Learning for Dialogue Generation
+      - Deep Reinforcement Learning for Dialogue Generation (56)
         - __done__ 8/27 The paper above
         - __done__ ref impl: [liuyuemaicha/Deep-Reinforcement-Learning-for-Dialogue-Generation-in-tensorflow: Deep-Reinforcement-Learning-for-Dialogue-Generation-in-tensorflow](https://github.com/liuyuemaicha/Deep-Reinforcement-Learning-for-Dialogue-Generation-in-tensorflow)
       - Building end-to-end dialogue systems using generative hierar- chical neural network models. 
         - __done__ 8/27 Useless for our case?
-      - A diversity-promoting objective function for neural conversation models. 
-        - __done__ 8/27 Pernalize generic response
+      - A diversity-promoting objective function for neural conversation models. (87)
+       - __done__ 8/27 Pernalize generic response
         - __done__ 8/27 ref impl [pender/chatbot-rnn: A toy chatbot powered by deep learning and trained on data from Reddit](https://github.com/pender/chatbot-rnn)
 
   - 8/23 super summary
