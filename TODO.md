@@ -29,6 +29,7 @@ Make *fun* chatbot like human.
         - __done__ 8/27 Useless for our case?
       - A diversity-promoting objective function for neural conversation models. 
         - __done__ 8/27 Pernalize generic response
+        - __done__ 8/27 ref impl [pender/chatbot-rnn: A toy chatbot powered by deep learning and trained on data from Reddit](https://github.com/pender/chatbot-rnn)
 
   - 8/23 super summary
 # random ideas
