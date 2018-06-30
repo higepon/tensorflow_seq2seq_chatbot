@@ -1,33 +1,31 @@
 from __future__ import print_function
 
-from enum import Enum, auto
 import copy as copy
 import datetime
+import filecmp
 import hashlib
 import json
 import os
 import os.path
-import filecmp
-import random
+import random as random
 import re
 import shutil
-import importlib
-
+from enum import Enum, auto
 
 import MeCab
 import easy_tf_log
 import matplotlib.pyplot as plt
-import random as random
 import numpy as np
 import tensorflow as tf
 import tweepy
 import yaml
 from easy_tf_log import tflog
-from google.colab import auth
 from google.colab import files
 from pushbullet import Pushbullet
 from tensorflow.python.layers import core as layers_core
 from tensorflow.python.platform import gfile
+
+
 class Mode(Enum):
     Test = auto()
     TrainSeq2Seq = auto()
@@ -35,8 +33,10 @@ class Mode(Enum):
     TrainRL = auto()
     TweetBot = auto()
 
-drive_path = 'drive/seq2seq_data'    
-    
+
+drive_path = 'drive/seq2seq_data'
+
+
 def client_id():
     clients = {'dfc1d5b22ba03430800179d23e522f6f': 'client1',
                'f8e857a2d792038820ebb2ae8d803f7c': 'client2',
@@ -51,10 +51,12 @@ print(client_id())
 current_client_id = client_id()
 
 mode = Mode.Test
-#mode = Mode.TrainSeq2Seq
-#mode = Mode.TrainSeq2SeqSwapped
-#mode = Mode.TrainRL
-#mode = Mode.TweetBot
+
+
+# mode = Mode.TrainSeq2Seq
+# mode = Mode.TrainSeq2SeqSwapped
+# mode = Mode.TrainRL
+# mode = Mode.TweetBot
 
 
 class Shell:
@@ -82,10 +84,10 @@ class Shell:
                 src = os.path.join(src_dir, f)
                 dst = os.path.join(dst_dir, f)
                 if os.path.exists(dst) and filecmp.cmp(src, dst):
-                  print("Skip copying ", src)
-                  continue
+                    print("Skip copying ", src)
+                    continue
                 else:
-                  print("Copying ", src)
+                    print("Copying ", src)
                 shutil.copy2(src, dst)
 
     @staticmethod
@@ -169,6 +171,7 @@ pb = Pushbullet(push_key)
 
 print(tf.__version__)
 
+
 def info(message, hparams):
     if hparams.debug_verbose:
         print(message)
@@ -176,6 +179,7 @@ def info(message, hparams):
 
 def has_gpu0():
     return tf.test.gpu_device_name() == "/device:GPU:0"
+
 
 class ModelDirectory(Enum):
     tweet_large = 'model/tweet_large'
@@ -322,7 +326,7 @@ class ChatbotModel:
             self.enc_inputs: enc_inputs,
             self.enc_inputs_lengths: enc_inputs_lengths,
         }
-        return self.sess.run([self.beam_replies, self.infer_logits], 
+        return self.sess.run([self.beam_replies, self.infer_logits],
                              feed_dict=infer_feed_dic)
 
     def sample(self, enc_inputs, enc_inputs_lengths):
@@ -853,7 +857,7 @@ class ChatbotModel:
         inference_helper = tf.contrib.seq2seq.SampleEmbeddingHelper(
             embedding_encoder,
             tf.fill([dynamic_batch_size], hparams.sos_id), hparams.eos_id,
-            softmax_temperature=0.1) # 1.0 is default
+            softmax_temperature=0.1)  # 1.0 is default
 
         infer_logits, replies = ChatbotModel._dynamic_decode(dec_cell,
                                                              dynamic_batch_size,
@@ -963,6 +967,7 @@ class ChatbotModel:
 
         # Sum over vocab_size axis
         log_probs = tf.nn.log_softmax(logits)
+
         def one_log_probs(beam_index):
             return tf.gather_nd(log_probs, ChatbotModel._convert_indices(
                 predicted_ids[:, beam_index]))
@@ -976,6 +981,7 @@ class ChatbotModel:
         _, outputs = tf.while_loop(cond, body, [i, outputs])
         result = tf.transpose(outputs.stack(), [1, 0, 2])
         return result
+
 
 class TrainDataSource:
     def __init__(self, source_path, hparams, vocab_path=None):
@@ -991,8 +997,6 @@ class TrainDataSource:
         self.valid_dataset = train_dataset.repeat()
         self.vocab = vocab
         self.rev_vocab = rev_vocab
-
-
 
 
 class Trainer:
@@ -1048,14 +1052,17 @@ class Trainer:
                 rl_train_data = model.sess.run(rl_train_data_next)
 
                 replies = model.infer(seq2seq_train_data[0],
-                                           seq2seq_train_data[1])
+                                      seq2seq_train_data[1])
                 samples, _ = model.sample(seq2seq_train_data[0],
                                           seq2seq_train_data[1])
 
                 for i in range(rl_hparams.batch_size):
-                    print(infer_helper.ids_to_string(seq2seq_train_data[0][:, i]))
-                    print("    [i] : {}".format(infer_helper.ids_to_string(replies[i])))
-                    print("    [s]: {}".format(infer_helper.ids_to_string(samples[i])))
+                    print(
+                        infer_helper.ids_to_string(seq2seq_train_data[0][:, i]))
+                    print("    [i] : {}".format(
+                        infer_helper.ids_to_string(replies[i])))
+                    print("    [s]: {}".format(
+                        infer_helper.ids_to_string(samples[i])))
 
                 # beam_predicted_ids, _ = model.infer_beam_search(seq2seq_train_data[0],
                 #                                                 seq2seq_train_data[1])
@@ -1165,7 +1172,7 @@ class Trainer:
             enc_inputs_lengths.append(reply_len)
             if reply_len <= hparams.encoder_length:
                 padded_reply = np.append(reply, ([hparams.pad_id] * (
-                        hparams.encoder_length - len(reply))))
+                    hparams.encoder_length - len(reply))))
                 enc_inputs.append(padded_reply)
             else:
                 raise Exception(
@@ -1207,7 +1214,7 @@ class Trainer:
         print_hparams(hparams)
 
         if should_clean_saved_model:
-            clean_model_path(hparams.model_path)    
+            clean_model_path(hparams.model_path)
         data_source = TrainDataSource(tweets_path, hparams, vocab_path)
         return self._train_loop(data_source, hparams, val_tweets)
 
@@ -1367,6 +1374,7 @@ class Trainer:
         self.val_losses.append(val_loss)
         return val_loss
 
+
 class InferenceHelper:
     def __init__(self, model, vocab, rev_vocab):
         self.model = model
@@ -1428,11 +1436,13 @@ class InferenceHelper:
         ids = ids[:self.model.hparams.encoder_length]
         len_ids = len(ids)
         ids.extend([self.model.hparams.pad_id] * (
-                self.model.hparams.encoder_length - len(ids)))
+            self.model.hparams.encoder_length - len(ids)))
         for i in range(self.model.hparams.batch_size):
             inference_encoder_inputs[:, i] = np.array(ids, dtype=np.int)
             inference_encoder_inputs_lengths[i] = len_ids
         return inference_encoder_inputs, inference_encoder_inputs_lengths
+
+
 class InferenceHelper:
     def __init__(self, model, vocab, rev_vocab):
         self.model = model
@@ -1494,11 +1504,12 @@ class InferenceHelper:
         ids = ids[:self.model.hparams.encoder_length]
         len_ids = len(ids)
         ids.extend([self.model.hparams.pad_id] * (
-                self.model.hparams.encoder_length - len(ids)))
+            self.model.hparams.encoder_length - len(ids)))
         for i in range(self.model.hparams.batch_size):
             inference_encoder_inputs[:, i] = np.array(ids, dtype=np.int)
             inference_encoder_inputs_lengths[i] = len_ids
         return inference_encoder_inputs, inference_encoder_inputs_lengths
+
 
 class ConversationTrainDataGenerator:
     def __init__(self):
@@ -1521,8 +1532,10 @@ class ConversationTrainDataGenerator:
         basename, extension = os.path.splitext(conversations_txt)
         seq2seq_path = "{}_seq2seq{}".format(basename, extension)
         rl_path = "{}_rl{}".format(basename, extension)
-        with open(seq2seq_path, "w") as s_out, open(rl_path, "w") as r_out, gfile.GFile(conversations_txt,
-                                                                                        mode="rb") as fin:
+        with open(seq2seq_path, "w") as s_out, open(rl_path,
+                                                    "w") as r_out, gfile.GFile(
+            conversations_txt,
+            mode="rb") as fin:
             tweet = None
             reply = None
             reply2 = None
@@ -1538,7 +1551,6 @@ class ConversationTrainDataGenerator:
                     self._write(s_out, tweet, reply, reply2)
                     self._write(r_out, tweet, reply, reply)
 
-
     def _write(self, s_out, tweet, reply, reply2):
         s_out.write(tweet)
         s_out.write(' ')
@@ -1546,7 +1558,8 @@ class ConversationTrainDataGenerator:
         s_out.write('\n')
         s_out.write(reply2)
         s_out.write('\n')
-        
+
+
 class TrainDataGenerator:
     def __init__(self, source_path, hparams):
         self.source_path = source_path
@@ -1565,25 +1578,30 @@ class TrainDataGenerator:
         self.enc_idx_len_path = "{}_enc_idx_len{}".format(basename, extension)
 
         self.vocab_path = "{}_vocab{}".format(basename, extension)
-        
-        self.generated_files = [self.enc_path, self.dec_path, self.enc_idx_path, self.dec_idx_path, self.dec_idx_eos_path, self.dec_idx_sos_path, self.dec_idx_len_path, self.enc_idx_padded_path, self.vocab_path, self.enc_idx_len_path]
+
+        self.generated_files = [self.enc_path, self.dec_path, self.enc_idx_path,
+                                self.dec_idx_path, self.dec_idx_eos_path,
+                                self.dec_idx_sos_path, self.dec_idx_len_path,
+                                self.enc_idx_padded_path, self.vocab_path,
+                                self.enc_idx_len_path]
         self.max_vocab_size = hparams.vocab_size
-        self.start_vocabs = [hparams.sos_token, hparams.eos_token, hparams.pad_token, hparams.unk_token]
+        self.start_vocabs = [hparams.sos_token, hparams.eos_token,
+                             hparams.pad_token, hparams.unk_token]
         self.tagger = MeCab.Tagger("-Owakati")
-        
+
     def remove_generated(self):
-      for f in self.generated_files:
-        if os.path.exists(f):
-          os.remove(f)
+        for f in self.generated_files:
+            if os.path.exists(f):
+                os.remove(f)
 
     def generate(self, vocab_path=None):
         print("generating enc and dec files...")
         self._generate_enc_dec()
         print("generating vocab file...")
         if vocab_path is None:
-          self._generate_vocab()
+            self._generate_vocab()
         else:
-          shutil.copyfile(vocab_path, self.vocab_path)
+            shutil.copyfile(vocab_path, self.vocab_path)
         print("loading vocab...")
         vocab, _ = self._load_vocab()
         print("generating id files...")
@@ -1631,8 +1649,8 @@ class TrainDataGenerator:
         vocab_list = self.start_vocabs + sorted(vocab_dic, key=vocab_dic.get,
                                                 reverse=True)
         if len(vocab_list) > self.max_vocab_size:
-          print("vocab_len=", len(vocab_list))
-          vocab_list = vocab_list[:self.max_vocab_size]
+            print("vocab_len=", len(vocab_list))
+            vocab_list = vocab_list[:self.max_vocab_size]
         with gfile.GFile(self.vocab_path, mode="w") as vocab_file:
             for w in vocab_list:
                 vocab_file.write(w + "\n")
@@ -1641,22 +1659,22 @@ class TrainDataGenerator:
         if gfile.Exists(self.enc_path) and gfile.Exists(self.dec_path):
             return
         with gfile.GFile(self.source_path, mode="rb") as f, gfile.GFile(
-                self.enc_path, mode="w+") as ef, gfile.GFile(self.dec_path,
-                                                             mode="w+") as df:
+            self.enc_path, mode="w+") as ef, gfile.GFile(self.dec_path,
+                                                         mode="w+") as df:
             tweet = None
             reply = None
             for i, line in enumerate(f):
                 line = line.decode('utf-8')
                 line = self.sanitize_line(line)
                 if i % 2 == 0:
-                  tweet = line
+                    tweet = line
                 else:
-                  reply = line
-                  if tweet and reply:
-                    ef.write(tweet)
-                    df.write(reply)
-                  tweet = None
-                  reply = None
+                    reply = line
+                    if tweet and reply:
+                        ef.write(tweet)
+                        df.write(reply)
+                    tweet = None
+                    reply = None
 
     def _generate_enc_idx_padded(self, source_path, dest_path, dest_len_path,
                                  max_line_len):
@@ -1671,11 +1689,12 @@ class TrainDataGenerator:
                 if len(ids) > max_line_len:
                     ids = ids[:max_line_len]
                     # i don't remember why we did this
-#                    ids = ids[-max_line_len:]
+                #                    ids = ids[-max_line_len:]
                 flen.write(str(len(ids)))
                 flen.write("\n")
                 if len(ids) < max_line_len:
-                    ids.extend([self.hparams.pad_id] * (max_line_len - len(ids)))
+                    ids.extend(
+                        [self.hparams.pad_id] * (max_line_len - len(ids)))
                 ids = [str(x) for x in ids]
                 fout.write(" ".join(ids))
                 fout.write("\n")
@@ -1691,10 +1710,11 @@ class TrainDataGenerator:
                 ids = [int(x) for x in line.split()]
                 if len(ids) > max_line_len - 1:
                     ids = ids[:max_line_len - 1]
-#                  ids = ids[-(max_line_len - 1):]
+                #                  ids = ids[-(max_line_len - 1):]
                 ids.append(self.hparams.eos_id)
                 if len(ids) < max_line_len:
-                    ids.extend([self.hparams.pad_id] * (max_line_len - len(ids)))
+                    ids.extend(
+                        [self.hparams.pad_id] * (max_line_len - len(ids)))
                 ids = [str(x) for x in ids]
                 fout.write(" ".join(ids))
                 fout.write("\n")
@@ -1707,7 +1727,7 @@ class TrainDataGenerator:
         if gfile.Exists(dest_path):
             return
         with open(source_path) as fin, open(dest_path, "w") as fout, open(
-                dest_len_path, "w") as flen:
+            dest_len_path, "w") as flen:
             line = fin.readline()
             while line:
                 ids = [self.hparams.sos_id]
@@ -1717,7 +1737,8 @@ class TrainDataGenerator:
                 flen.write(str(len(ids)))
                 flen.write("\n")
                 if len(ids) < max_line_len:
-                    ids.extend([self.hparams.pad_id] * (max_line_len - len(ids)))
+                    ids.extend(
+                        [self.hparams.pad_id] * (max_line_len - len(ids)))
                 ids = [str(x) for x in ids]
                 fout.write(" ".join(ids))
                 fout.write("\n")
@@ -1727,7 +1748,7 @@ class TrainDataGenerator:
     def sanitize_line(line):
         # replace @username
         # replacing @username had bad impace where USERNAME token shows up everywhere.
-#        line = re.sub(r"@([A-Za-z0-9_]+)", "USERNAME", line)
+        #        line = re.sub(r"@([A-Za-z0-9_]+)", "USERNAME", line)
         line = re.sub(r"@([A-Za-z0-9_]+)", "", line)
         # Remove URL
         line = re.sub(r'https?:\/\/.*', "", line)
@@ -1817,6 +1838,7 @@ class TrainDataGenerator:
                                     replies_with_sos_prefix,
                                     replies_with_sos_suffix_lengths)), vocab, rev_vocab
 
+
 def print_hparams(hparams):
     result = {}
     for key in ['machine', 'batch_size', 'num_units', 'num_layers',
@@ -1827,6 +1849,7 @@ def print_hparams(hparams):
                 'model_path']:
         result[key] = hparams.get(key)
     print(result)
+
 
 # Helper functions to test
 def make_test_training_data(hparams):
@@ -1904,24 +1927,24 @@ def test_training(test_hparams, model):
 
     # testing 
     log_prob54 = model.log_prob(inference_encoder_inputs,
-                                      inference_encoder_inputs_lengths,
-                                      np.array([5, 4]))
+                                inference_encoder_inputs_lengths,
+                                np.array([5, 4]))
     log_prob65 = model.log_prob(inference_encoder_inputs,
-                                      inference_encoder_inputs_lengths,
-                                      np.array([6, 5]))
+                                inference_encoder_inputs_lengths,
+                                np.array([6, 5]))
     print("log_prob for 54", log_prob54)
     print("log_prob for 65", log_prob65)
 
     reward = model.reward_ease_of_answering(test_hparams.encoder_length,
-                                                  inference_encoder_inputs,
-                                                  inference_encoder_inputs_lengths,
-                                                  np.array([[5], [6]]))
+                                            inference_encoder_inputs,
+                                            inference_encoder_inputs_lengths,
+                                            np.array([[5], [6]]))
     print("reward=", reward)
 
     if test_hparams.debug_verbose:
         print(inference_encoder_inputs)
     replies = model.infer(inference_encoder_inputs,
-                                inference_encoder_inputs_lengths)
+                          inference_encoder_inputs_lengths)
     print("Infered replies", replies[0])
     print("Expected replies", training_target_labels[0])
 
@@ -1950,38 +1973,43 @@ def test_distributed_pattern(hparams):
 
     model.save()
 
-    inference_encoder_inputs = np.empty((hparams.encoder_length, hparams.batch_size),
-                                        dtype=np.int)
-    inference_encoder_inputs_lengths = np.empty(hparams.batch_size, dtype=np.int)
+    inference_encoder_inputs = np.empty(
+        (hparams.encoder_length, hparams.batch_size),
+        dtype=np.int)
+    inference_encoder_inputs_lengths = np.empty(hparams.batch_size,
+                                                dtype=np.int)
 
     for i in range(hparams.batch_size):
-      inference_encoder_inputs[:, i] = first_tweet
-      inference_encoder_inputs_lengths[i] = len(first_tweet)
+        inference_encoder_inputs[:, i] = first_tweet
+        inference_encoder_inputs_lengths[i] = len(first_tweet)
 
     model.restore()
     replies = model.infer(inference_encoder_inputs,
-                                    inference_encoder_inputs_lengths)
+                          inference_encoder_inputs_lengths)
     print("Inferred replies", replies[0])
-        
-    beam_replies, logits = model.infer_beam_search(inference_encoder_inputs,
-                                                 inference_encoder_inputs_lengths)
 
-    print("logits", logits[0])    
+    beam_replies, logits = model.infer_beam_search(inference_encoder_inputs,
+                                                   inference_encoder_inputs_lengths)
+
+    print("logits", logits[0])
     print("Inferred replies candidate0", beam_replies[0][:, 0])
     print("Inferred replies candidate1", beam_replies[0][:, 1])
-        
-    inference_encoder_inputs = np.empty((hparams.encoder_length, hparams.batch_size),
-                                        dtype=np.int)
-    inference_encoder_inputs_lengths = np.empty(hparams.batch_size, dtype=np.int)
+
+    inference_encoder_inputs = np.empty(
+        (hparams.encoder_length, hparams.batch_size),
+        dtype=np.int)
+    inference_encoder_inputs_lengths = np.empty(hparams.batch_size,
+                                                dtype=np.int)
 
     for i in range(hparams.batch_size):
-      inference_encoder_inputs[:, i] = first_tweet
-      inference_encoder_inputs_lengths[i] = len(first_tweet)
-      
+        inference_encoder_inputs[:, i] = first_tweet
+        inference_encoder_inputs_lengths[i] = len(first_tweet)
+
     replies = model.sample(inference_encoder_inputs,
-                                                   inference_encoder_inputs_lengths)
-    print("sample replies", replies[0])        
+                           inference_encoder_inputs_lengths)
+    print("sample replies", replies[0])
     print("Expected replies", training_target_labels[0])
+
 
 def test_distributed_one(enable_attention):
     hparams = copy.deepcopy(test_hparams).override_from_dict({
@@ -1990,7 +2018,6 @@ def test_distributed_one(enable_attention):
         'beam_width': 2,
     })
     test_distributed_pattern(hparams)
-
 
 
 def clean_model_path(model_path):
@@ -2006,7 +2033,8 @@ def test_tweets_small_swapped(hparams):
     replies = ["@higepon おはようございます！", "おつかれさまー。気をつけて。", "こちらこそよろしくお願いします。"]
     trainer = Trainer()
     trainer.train_seq2seq_swapped(hparams, "tweets_small.txt", replies)
-    
+
+
 def test_tweets_large(hparams):
     tweets = ["さて福岡行ってきます！", "誰か飲みに行こう", "熱でてるけど、でもなんか食べなきゃーと思ってアイス買おうとしたの",
               "今日のドラマ面白そう！", "お腹すいたー", "おやすみ～", "おはようございます。寒いですね。",
@@ -2024,6 +2052,7 @@ def test_tweets_large_swapped(hparams):
     trainer.train_seq2seq_swapped(hparams, "tweets_large.txt", tweets,
                                   should_clean_saved_model=False)
     return trainer.model
+
 
 class StreamListener(tweepy.StreamListener):
     def __init__(self, api, helper):
@@ -2102,7 +2131,9 @@ def listener(hparams):
                                listener=StreamListener(api, helper))
         print("listener starting...")
         stream.userstream()
+
+
 #    except Exception as e:
 #     print(e.__doc__)
 
-print("module reloaded7")    
+print("module reloaded9")
