@@ -26,7 +26,8 @@ from tensorflow.python.layers import core as layers_core
 from tensorflow.python.platform import gfile
 
 
-## TODO: remove beam_rl staff. Check every method names if they're being used. Check analyzer and fix all.
+# TODO: remove beam_rl staff. Check every method names if they're being used.
+#  Check analyzer and fix all.
 
 
 class Mode(Enum):
@@ -41,6 +42,7 @@ drive_path = 'drive/seq2seq_data'
 
 
 def client_id():
+    # noinspection SpellCheckingInspection
     clients = {'dfc1d5b22ba03430800179d23e522f6f': 'client1',
                'f8e857a2d792038820ebb2ae8d803f7c': 'client2',
                '7628f983785173edabbde501ef8f781d': 'client3'}
@@ -83,9 +85,9 @@ class Shell:
     @staticmethod
     def copy_all_files(src_dir, dst_dir):
         if os.path.exists(src_dir):
-            for f in os.listdir(src_dir):
-                src = os.path.join(src_dir, f)
-                dst = os.path.join(dst_dir, f)
+            for file in os.listdir(src_dir):
+                src = os.path.join(src_dir, file)
+                dst = os.path.join(dst_dir, file)
                 if os.path.exists(dst) and filecmp.cmp(src, dst):
                     print("Skip copying ", src)
                     continue
@@ -95,20 +97,20 @@ class Shell:
 
     @staticmethod
     def remove_all_files(target_dir):
-        for f in Shell.listdir(target_dir):
-            os.remove(f)
+        for file in Shell.listdir(target_dir):
+            os.remove(file)
 
     @staticmethod
     def remove_matched_files(target_dir, pattern):
-        for f in Shell.listdir(target_dir):
-            if re.match(pattern, f):
-                os.remove(f)
+        for file in Shell.listdir(target_dir):
+            if re.match(pattern, file):
+                os.remove(file)
 
     @staticmethod
     def download_logs(path):
-        for f in Shell.listdir(path):
-            if re.match('.*events', f):
-                files.download(f)
+        for file in Shell.listdir(path):
+            if re.match('.*events', file):
+                files.download(file)
 
     @staticmethod
     def remove_saved_model(hparams):
@@ -126,16 +128,16 @@ class Shell:
     @staticmethod
     def listdir(target_dir):
         for dir_path, _, file_names in os.walk(target_dir):
-            for f in file_names:
-                yield os.path.abspath(os.path.join(dir_path, f))
+            for file in file_names:
+                yield os.path.abspath(os.path.join(dir_path, file))
 
     @staticmethod
     def list_model_file(path):
-        f = open('{}/checkpoint'.format(path))
-        text = f.read()
-        f.close()
+        file = open('{}/checkpoint'.format(path))
+        text = file.read()
+        file.close()
         print(text)
-        m = re.match(r".*ChatbotModel\-(\d+)", text)
+        m = re.match(r".*ChatbotModel-(\d+)", text)
         model_name = m.group(1)
         files = ["checkpoint"]
         files.extend([x for x in os.listdir(path) if
@@ -166,11 +168,16 @@ pb = Pushbullet(push_key)
 # You've summarized Seq2Seq
 # at http://d.hatena.ne.jp/higepon/20171210/1512887715.
 
-# If you see following error, it means your max(len(tweets of training set)) <  decoder_length.
+# If you see following error, it means your max(len(tweets of training set))
+# <  decoder_length.
 # This should be a bug somewhere in build_decoder, but couldn't find one yet.
-# You can workaround by setting hparams.decoder_length=max len of tweet in training set.
-# InvalidArgumentError: logits and labels must have the same first dimension, got logits shape [48,50] and labels shape [54]
-#	 [[Node: root/SparseSoftmaxCrossEntropyWithLogits/SparseSoftmaxCrossEntropyWithLogits = SparseSoftmaxCrossEntropyWithLogits[T=DT_FLOAT, Tlabels=DT_INT32, 
+# You can workaround by setting hparams.decoder_length=max len of tweet in
+# training set.
+# InvalidArgumentError: logits and labels must have the same first dimension,
+#  got logits shape [48,50] and labels shape [54]
+# [[Node: root/SparseSoftmaxCrossEntropyWithLogits
+# /SparseSoftmaxCrossEntropyWithLogits = SparseSoftmaxCrossEntropyWithLogits[
+# T=DT_FLOAT, Tlabels=DT_INT32,
 
 print(tf.__version__)
 
@@ -245,8 +252,6 @@ test_hparams = copy.deepcopy(base_hparams).override_from_dict(
 test_attention_hparams = copy.deepcopy(test_hparams).override_from_dict(
     {'use_attention': True})
 
-import tensorflow as tf
-
 # For debug purpose.
 tf.reset_default_graph()
 
@@ -266,18 +271,24 @@ class ChatbotModel:
 
         # Used to store previously inferred by beam_search.
         #        self.beam_predicted_ids = tf.placeholder(tf.int32,
-        #                                                 name="beam_predicted_ids")
-        self.enc_inputs, self.enc_inputs_lengths, enc_outputs, enc_state, emb_encoder = self._build_encoder(
+        #
+        # name="beam_predicted_ids")
+        self.enc_inputs, self.enc_inputs_lengths, enc_outputs, enc_state, \
+        emb_encoder = self._build_encoder(
             hparams, scope)
 
-        self.dec_inputs, self.dec_tgt_lengths, self._logits, self.sample_logits, self.sample_replies, self.sample_log_probs_selected, self.infer_logits, self.replies, self.beam_replies = self._build_decoder(
+        self.dec_inputs, self.dec_tgt_lengths, self._logits, \
+        self.sample_logits, self.sample_replies, \
+        self.sample_log_probs_selected, self.infer_logits, self.replies, \
+        self.beam_replies = self._build_decoder(
             hparams, self.enc_inputs_lengths, emb_encoder,
             enc_state, enc_outputs)
         self._log_probs = tf.nn.log_softmax(self.infer_logits)
 
         self.reward = tf.placeholder(tf.float32, name="reward")
-        self.tgt_labels, self.global_step, self.loss, self.train_op = self._build_seq2seq_optimizer(
-            hparams, self._logits)
+        self.tgt_labels, self.global_step, self.loss, self.train_op = \
+            self._build_seq2seq_optimizer(
+                hparams, self._logits)
         self.rl_loss, self.rl_train_op = self._build_rl_optimizer(hparams)
 
         self.train_loss_summary = tf.summary.scalar("loss", self.loss)
@@ -526,7 +537,8 @@ class ChatbotModel:
                                                        dtype=tf.float32,
                                                        sequence_length=enc_inputs_lengths)
 
-        return enc_inputs, enc_inputs_lengths, enc_outputs, enc_state, emb_encoder
+        return enc_inputs, enc_inputs_lengths, enc_outputs, enc_state, \
+               emb_encoder
 
     @staticmethod
     def _build_training_decoder(hparams, enc_inputs_lengths,
@@ -565,8 +577,9 @@ class ChatbotModel:
         #                list of final state of RNN on decode process.
         #   final_sequence_lengths: [batch_size], list of each decoded sequence.
         with tf.variable_scope(scope):
-            final_outputs, _final_state, _final_sequence_lengths = tf.contrib.seq2seq.dynamic_decode(
-                training_decoder)
+            final_outputs, _final_state, _final_sequence_lengths = \
+                tf.contrib.seq2seq.dynamic_decode(
+                    training_decoder)
 
         if hparams.debug_verbose:
             print("rnn_output.shape=", final_outputs.rnn_output.shape)
@@ -596,7 +609,8 @@ class ChatbotModel:
         dec_emb_inputs = tf.nn.embedding_lookup(embedding_encoder,
                                                 dec_inputs)
 
-        # https://stackoverflow.com/questions/39573188/output-projection-in-seq2seq-model-tensorflow
+        # https://stackoverflow.com/questions/39573188/output-projection-in
+        # -seq2seq-model-tensorflow
         # Internally, a neural network operates on dense vectors of some size,
         # often 256, 512 or 1024 floats (let's say 512 for here).
         # But at the end it needs to predict a word
@@ -654,7 +668,9 @@ class ChatbotModel:
         indices = self._convert_indices(self.sampled)
         sample_log_probs = tf.nn.log_softmax(sample_logits)
         sample_log_probs_selected = tf.gather_nd(sample_log_probs, indices)
-        return dec_inputs, dec_tgt_lengths, logits, sample_logits, sample_replies, sample_log_probs_selected, infer_logits, replies, beam_replies
+        return dec_inputs, dec_tgt_lengths, logits, sample_logits, \
+               sample_replies, sample_log_probs_selected, infer_logits, \
+               replies, beam_replies
 
     @staticmethod
     def _build_greedy_inference(hparams, embedding_encoder, enc_state,
@@ -691,7 +707,8 @@ class ChatbotModel:
             with tf.variable_scope(scope, reuse=True):
                 # Attention
                 # encoder_outputs is time major, so transopse it to batch major.
-                # attention_encoder_outputs: [batch_size, encoder_length, num_units]
+                # attention_encoder_outputs: [batch_size, encoder_length,
+                # num_units]
                 attention_encoder_outputs = tf.transpose(encoder_outputs,
                                                          [1, 0, 2])
 
@@ -804,7 +821,8 @@ class ChatbotModel:
             with tf.variable_scope(scope, reuse=reuse):
                 # Attention
                 # encoder_outputs is time major, so transopse it to batch major.
-                # attention_encoder_outputs: [batch_size, encoder_length, num_units]
+                # attention_encoder_outputs: [batch_size, encoder_length,
+                # num_units]
                 attention_encoder_outputs = tf.transpose(enc_outputs,
                                                          [1, 0, 2])
 
@@ -847,7 +865,8 @@ class ChatbotModel:
         print_first_indices = tf.Print(first_indices, [tf.shape(first_indices),
                                                        tf.shape(
                                                            second_indices)],
-                                       message="(first_indices, second_indices)")
+                                       message="(first_indices, "
+                                               "second_indices)")
         return tf.stack([print_first_indices, second_indices, sampled_indices],
                         axis=2)
 
@@ -859,7 +878,8 @@ class TrainDataSource:
                                        hparams=hparams)
         # generator.remove_generated()
         train_dataset, vocab, rev_vocab = generator.generate(vocab_path)
-        # We don't use shuffle here, because we want to align two data source here.
+        # We don't use shuffle here, because we want to align two data source
+        #  here.
         self.train_dataset = train_dataset.repeat()
         self.vocab_path = generator.vocab_path
         # todo(higepon): Use actual validation dataset.
@@ -908,11 +928,15 @@ class Trainer:
         infer_helper = InferenceHelper(model, vocab, rev_vocab)
 
         graph = model.sess.graph
-        writer = tf.summary.FileWriter(rl_hparams.model_path, graph)
+        _ = tf.summary.FileWriter(rl_hparams.model_path, graph)
         last_saved_time = datetime.datetime.now()
         with graph.as_default():
-            seq2seq_train_data_next = seq2seq_data_source.train_dataset.make_one_shot_iterator().get_next()
-            rl_train_data_next = rl_data_source.train_dataset.make_one_shot_iterator().get_next()
+            seq2seq_train_data_next = \
+                seq2seq_data_source.train_dataset.make_one_shot_iterator(
+
+                ).get_next()
+            rl_train_data_next = \
+                rl_data_source.train_dataset.make_one_shot_iterator().get_next()
 
             data = model.sess.run(seq2seq_train_data_next)
             model.train(data[0], data[1], data[2], data[3], data[4])
@@ -978,15 +1002,20 @@ class Trainer:
                     tweet = qi[batch]
                     tweet_len = 0
                     p = 0
-                    for i, id in enumerate(tweet):
-                        # log_probs shape is supposed to be [batch_size, dec_length, vocab_size],
-                        # but it sometimes becomes [batch_size, smaller_value, vocab_size].
-                        # This is because we're using GreedyDecoder, dynamic_decode finishes the decoder process when it sees eos_id.
-                        # If all enc_inputs ends up shorter dec_output, we can have smaller_value here.
+                    for i, word_id in enumerate(tweet):
+                        # log_probs shape is supposed to be [batch_size,
+                        # dec_length, vocab_size],
+                        # but it sometimes becomes [batch_size,
+                        # smaller_value, vocab_size].
+                        # This is because we're using GreedyDecoder,
+                        # dynamic_decode finishes the decoder process when it
+                        #  sees eos_id.
+                        # If all enc_inputs ends up shorter dec_output,
+                        # we can have smaller_value here.
                         if i < len(log_probs[batch]):
-                            p += log_probs[batch][i][id]
+                            p += log_probs[batch][i][word_id]
                         tweet_len = tweet_len + 1
-                        if id == rl_hparams.eos_id:
+                        if word_id == rl_hparams.eos_id:
                             break
                     assert (tweet_len != 0)
                     p /= tweet_len
@@ -1015,9 +1044,9 @@ class Trainer:
                     print("save and restore")
                     model.save()
                     is_restored = model.restore()
-                    assert (is_restored)
+                    assert is_restored
                     is_restored = model.restore()
-                    assert (is_restored)
+                    assert is_restored
                     self._print_inferences(step, tweets, infer_helper)
                     now = datetime.datetime.now()
                     print("delta:", (now - last_saved_time).total_seconds())
@@ -1025,7 +1054,8 @@ class Trainer:
                     assert is_restored
                     print("step={}, global_step={}".format(step, global_step))
 
-    def format_enc_inputs(self, hparams, model, replies):
+    @staticmethod
+    def format_enc_inputs(hparams, model, replies):
         enc_inputs = []
         enc_inputs_lengths = []
 
@@ -1033,7 +1063,8 @@ class Trainer:
         for reply in replies:
             reply_len = model.seq_len(reply.tolist())
             # Safe guard: sampled reply has sometimes 0 len.
-            #            adjusted_len = hparams.encoder_length if reply_len == 0 else reply_len
+            #            adjusted_len = hparams.encoder_length if reply_len
+            # == 0 else reply_len
             enc_inputs_lengths.append(reply_len)
             if reply_len <= hparams.encoder_length:
                 padded_reply = np.append(reply, ([hparams.pad_id] * (
@@ -1094,7 +1125,8 @@ class Trainer:
     @staticmethod
     def create_model(hparams):
 
-        # See https://www.tensorflow.org/tutorials/using_gpu#allowing_gpu_memory_growth
+        # See https://www.tensorflow.org/tutorials/using_gpu
+        # #allowing_gpu_memory_growth
         config = tf.ConfigProto(log_device_placement=False)
         config.gpu_options.allow_growth = True
 
@@ -1146,10 +1178,10 @@ class Trainer:
             return self._raw_train_loop(data_source, hparams, model, train_func,
                                         tweets)
         except KeyboardInterrupt as ke:
-            raise (ke)
+            raise ke
         except Exception as e:
             pb.push_note("Train error", str(e))
-            raise (e)
+            raise e
 
     def _raw_train_loop(self, data_source, hparams,
                         model, train_func,
@@ -1159,8 +1191,11 @@ class Trainer:
         infer_helper = InferenceHelper(model, vocab, rev_vocab)
         graph = model.sess.graph
         with graph.as_default():
-            train_data_next = data_source.train_dataset.make_one_shot_iterator().get_next()
-            val_data_next = data_source.valid_dataset.make_one_shot_iterator().get_next()
+            train_data_next = \
+                data_source.train_dataset.make_one_shot_iterator().get_next()
+            val_data_next = data_source.valid_dataset.make_one_shot_iterator(
+
+            ).get_next()
             easy_tf_log.set_dir(hparams.model_path)
             writer = tf.summary.FileWriter(hparams.model_path, graph)
             self.last_saved_time = datetime.datetime.now()
@@ -1178,7 +1213,8 @@ class Trainer:
                     assert is_restored
                     self._print_inferences(step, tweets, infer_helper)
                     self._compute_val_loss(step, model, val_data_next, writer)
-                    #                    self._print_stats(hparams, learning_rate)
+                    #                    self._print_stats(hparams,
+                    # learning_rate)
                     self._plot_if_necessary()
                     self._save_model_in_drive(hparams)
                 else:
@@ -1195,7 +1231,8 @@ class Trainer:
     def _print_stats(self, hparams, learning_rate):
         print("learning rate", learning_rate)
         delta = (
-                    datetime.datetime.now() - self.last_stats_time).total_seconds() * 1000
+                    datetime.datetime.now() -
+                    self.last_stats_time).total_seconds() * 1000
         self._print_log("msec/data",
                         delta / hparams.batch_size / self.num_stats_per)
         self.last_stats_time = datetime.datetime.now()
@@ -1260,7 +1297,8 @@ class InferenceHelper:
         all_infer.extend(beam_infer)
         return all_infer
 
-    def sanitize_text(self, line):
+    @staticmethod
+    def sanitize_text(line):
         line = re.sub(r"\[EOS\]", " ", line)
         line = re.sub(r"\[UNK\]", "💩", line)
         return line
@@ -1284,76 +1322,8 @@ class InferenceHelper:
 
     def ids_to_words(self, ids):
         words = ""
-        for id in ids:
-            words += self.rev_vocab[id]
-        return words
-
-    def create_inference_input(self, text):
-        inference_encoder_inputs = np.empty(
-            (self.model.hparams.encoder_length, self.model.hparams.batch_size),
-            dtype=np.int)
-        inference_encoder_inputs_lengths = np.empty(
-            self.model.hparams.batch_size, dtype=np.int)
-        text = TrainDataGenerator.sanitize_line(text)
-        tagger = MeCab.Tagger("-Owakati")
-        words = tagger.parse(text).split()
-        ids = self.words_to_ids(words)
-        ids = ids[:self.model.hparams.encoder_length]
-        len_ids = len(ids)
-        ids.extend([self.model.hparams.pad_id] * (
-            self.model.hparams.encoder_length - len(ids)))
-        for i in range(self.model.hparams.batch_size):
-            inference_encoder_inputs[:, i] = np.array(ids, dtype=np.int)
-            inference_encoder_inputs_lengths[i] = len_ids
-        return inference_encoder_inputs, inference_encoder_inputs_lengths
-
-
-class InferenceHelper:
-    def __init__(self, model, vocab, rev_vocab):
-        self.model = model
-        self.vocab = vocab
-        self.rev_vocab = rev_vocab
-
-    def inferences(self, tweet):
-        encoder_inputs, encoder_inputs_lengths = self.create_inference_input(
-            tweet)
-        replies = self.model.infer(encoder_inputs, encoder_inputs_lengths)
-        ids = replies[0].tolist()
-        all_infer = [self.sanitize_text(self.ids_to_words(ids))]
-        beam_replies, logits = self.model.infer_beam_search(encoder_inputs,
-                                                            encoder_inputs_lengths)
-        beam_infer = [
-            self.sanitize_text(self.ids_to_words(beam_replies[0][:, i])) for i
-            in range(self.model.hparams.beam_width)]
-        all_infer.extend(beam_infer)
-        return all_infer
-
-    def sanitize_text(self, line):
-        line = re.sub(r"\[EOS\]", " ", line)
-        line = re.sub(r"\[UNK\]", "💩", line)
-        return line
-
-    def print_inferences(self, tweet):
-        print(tweet)
-        for i, reply in enumerate(self.inferences(tweet)):
-            print("    [{}]{}".format(i, reply))
-
-    def words_to_ids(self, words):
-        ids = []
-        for word in words:
-            if word in self.vocab:
-                ids.append(self.vocab[word])
-            else:
-                ids.append(self.model.hparams.unk_id)
-        return ids
-
-    def ids_to_string(self, ids):
-        return self.sanitize_text(self.ids_to_words(ids))
-
-    def ids_to_words(self, ids):
-        words = ""
-        for id in ids:
-            words += self.rev_vocab[id]
+        for word_id in ids:
+            words += self.rev_vocab[word_id]
         return words
 
     def create_inference_input(self, text):
@@ -1416,7 +1386,8 @@ class ConversationTrainDataGenerator:
                     self._write(s_out, tweet, reply, reply2)
                     self._write(r_out, tweet, reply, reply)
 
-    def _write(self, s_out, tweet, reply, reply2):
+    @staticmethod
+    def _write(s_out, tweet, reply, reply2):
         s_out.write(tweet)
         s_out.write(' ')
         s_out.write(reply)
@@ -1455,9 +1426,9 @@ class TrainDataGenerator:
         self.tagger = MeCab.Tagger("-Owakati")
 
     def remove_generated(self):
-        for f in self.generated_files:
-            if os.path.exists(f):
-                os.remove(f)
+        for file in self.generated_files:
+            if os.path.exists(file):
+                os.remove(file)
 
     def generate(self, vocab_path=None):
         print("generating enc and dec files...")
@@ -1489,18 +1460,18 @@ class TrainDataGenerator:
     def _generate_id_file(self, source_path, dest_path, vocab):
         if gfile.Exists(dest_path):
             return
-        with gfile.GFile(source_path, mode="rb") as f, gfile.GFile(dest_path,
-                                                                   mode="wb") as of:
-            for line in f:
+        with gfile.GFile(source_path, mode="rb") as file, gfile.GFile(dest_path,
+                                                                      mode="wb") as of:
+            for line in file:
                 line = line.decode('utf-8')
                 words = self.tagger.parse(line).split()
                 ids = [vocab.get(w, self.hparams.unk_id) for w in words]
-                of.write(" ".join([str(id) for id in ids]) + "\n")
+                of.write(" ".join([str(word_id) for word_id in ids]) + "\n")
 
     def _load_vocab(self):
         rev_vocab = []
-        with gfile.GFile(self.vocab_path, mode="r") as f:
-            rev_vocab.extend(f.readlines())
+        with gfile.GFile(self.vocab_path, mode="r") as file:
+            rev_vocab.extend(file.readlines())
             rev_vocab = [line.strip() for line in rev_vocab]
             # Dictionary of (word, idx)
             vocab = dict([(x, y) for (y, x) in enumerate(rev_vocab)])
@@ -1523,12 +1494,12 @@ class TrainDataGenerator:
     def _generate_enc_dec(self):
         if gfile.Exists(self.enc_path) and gfile.Exists(self.dec_path):
             return
-        with gfile.GFile(self.source_path, mode="rb") as f, gfile.GFile(
+        with gfile.GFile(self.source_path, mode="rb") as file, gfile.GFile(
             self.enc_path, mode="w+") as ef, gfile.GFile(self.dec_path,
                                                          mode="w+") as df:
             tweet = None
             reply = None
-            for i, line in enumerate(f):
+            for i, line in enumerate(file):
                 line = line.decode('utf-8')
                 line = self.sanitize_line(line)
                 if i % 2 == 0:
@@ -1612,11 +1583,12 @@ class TrainDataGenerator:
     @staticmethod
     def sanitize_line(line):
         # replace @username
-        # replacing @username had bad impace where USERNAME token shows up everywhere.
+        # replacing @username had bad impact where USERNAME token shows up
+        # everywhere.
         #        line = re.sub(r"@([A-Za-z0-9_]+)", "USERNAME", line)
         line = re.sub(r"@([A-Za-z0-9_]+)", "", line)
         # Remove URL
-        line = re.sub(r'https?:\/\/.*', "", line)
+        line = re.sub(r'https?://.*', "", line)
         line = line.lstrip()
         return line
 
@@ -1639,8 +1611,8 @@ class TrainDataGenerator:
     def _build_vocab_dic(self, source_path, vocab_dic=None):
         if vocab_dic is None:
             vocab_dic = {}
-        with gfile.GFile(source_path, mode="r") as f:
-            for line in f:
+        with gfile.GFile(source_path, mode="r") as file:
+            for line in file:
                 words = self.tagger.parse(line).split()
                 for word in words:
                     if word in vocab_dic:
@@ -1651,9 +1623,9 @@ class TrainDataGenerator:
 
     @staticmethod
     def _read_file(source_path):
-        f = open(source_path)
-        data = f.read()
-        f.close()
+        file = open(source_path)
+        data = file.read()
+        file.close()
         return data
 
     def _read_vocab(self, source_path):
@@ -1703,7 +1675,8 @@ class TrainDataGenerator:
         return tf.data.Dataset.zip((tweets_transposed, tweets_lengths,
                                     replies_with_eos_suffix,
                                     replies_with_sos_prefix,
-                                    replies_with_sos_suffix_lengths)), vocab, rev_vocab
+                                    replies_with_sos_suffix_lengths)), vocab, \
+               rev_vocab
 
 
 def print_hparams(hparams):
@@ -1762,30 +1735,32 @@ def make_test_training_data(hparams):
         info("Replies", hparams)
         info(training_target_labels, hparams)
         info(training_decoder_inputs, hparams)
-    return first_tweet, train_encoder_inputs, train_encoder_inputs_lengths, training_target_labels, training_decoder_inputs
+    return first_tweet, train_encoder_inputs, train_encoder_inputs_lengths, \
+           training_target_labels, training_decoder_inputs
 
 
-def test_training(test_hparams, model):
-    if test_hparams.use_attention:
+def test_training(hparams, model):
+    if hparams.use_attention:
         print("==== training model[attention] ====")
     else:
         print("==== training model ====")
-    first_tweet, train_encoder_inputs, train_encoder_inputs_lengths, training_target_labels, training_decoder_inputs = make_test_training_data(
-        test_hparams)
-    for i in range(test_hparams.num_train_steps):
+    first_tweet, train_encoder_inputs, train_encoder_inputs_lengths, \
+    training_target_labels, training_decoder_inputs = make_test_training_data(
+        hparams)
+    for i in range(hparams.num_train_steps):
         _ = model.train(train_encoder_inputs,
                         train_encoder_inputs_lengths,
                         training_target_labels,
                         training_decoder_inputs,
-                        np.ones(test_hparams.batch_size,
-                                dtype=int) * test_hparams.decoder_length)
-        if i % 5 == 0 and test_hparams.debug_verbose:
+                        np.ones(hparams.batch_size,
+                                dtype=int) * hparams.decoder_length)
+        if i % 5 == 0 and hparams.debug_verbose:
             print('.', end='')
 
         if i % 15 == 0:
             model.save()
 
-    inference_encoder_inputs = np.empty((test_hparams.encoder_length, 1),
+    inference_encoder_inputs = np.empty((hparams.encoder_length, 1),
                                         dtype=np.int)
     inference_encoder_inputs_lengths = np.empty(1, dtype=np.int)
     for i in range(1):
@@ -1802,17 +1777,17 @@ def test_training(test_hparams, model):
     print("log_prob for 54", log_prob54)
     print("log_prob for 65", log_prob65)
 
-    reward = model.reward_ease_of_answering(test_hparams.encoder_length,
+    reward = model.reward_ease_of_answering(hparams.encoder_length,
                                             inference_encoder_inputs,
                                             inference_encoder_inputs_lengths,
                                             np.array([[5], [6]]))
     print("reward=", reward)
 
-    if test_hparams.debug_verbose:
+    if hparams.debug_verbose:
         print(inference_encoder_inputs)
     replies = model.infer(inference_encoder_inputs,
                           inference_encoder_inputs_lengths)
-    print("Infered replies", replies[0])
+    print("Inferred replies", replies[0])
     print("Expected replies", training_target_labels[0])
 
 
@@ -1825,7 +1800,8 @@ def test_distributed_pattern(hparams):
         'attention' if hparams.use_attention else '',
         'beam' if hparams.beam_width > 0 else ''))
 
-    first_tweet, train_encoder_inputs, train_encoder_inputs_lengths, training_target_labels, training_decoder_inputs = make_test_training_data(
+    first_tweet, train_encoder_inputs, train_encoder_inputs_lengths, \
+    training_target_labels, training_decoder_inputs = make_test_training_data(
         hparams)
 
     model = Trainer().create_model(hparams)
@@ -1952,7 +1928,7 @@ class StreamListener(tweepy.StreamListener):
             return True
 
     @staticmethod
-    def on_error(status_code):
+    def on_error(status_code, **kwargs):
         print(status_code)
         return True
 
@@ -1978,10 +1954,10 @@ def listener(hparams):
     infer_model.restore()
     helper = InferenceHelper(infer_model, vocab, rev_vocab)
 
-    config_path = 'config.yml'
-    Shell.download_file_if_necessary(config_path)
-    f = open(config_path, 'rt')
-    cfg = yaml.load(f)['twitter']
+    config_yml = 'config.yml'
+    Shell.download_file_if_necessary(config_yml)
+    file = open(config_yml, 'rt')
+    cfg = yaml.load(file)['twitter']
 
     consumer_key = cfg['consumer_key']
     consumer_secret = cfg['consumer_secret']
