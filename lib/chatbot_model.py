@@ -7,19 +7,21 @@ import hashlib
 import json
 import os
 import os.path
-import random as random
 import re
 import shutil
 
 import MeCab
+# noinspection PyUnresolvedReferences
 import easy_tf_log
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-import tweepy
 import yaml
+# noinspection PyUnresolvedReferences
 from easy_tf_log import tflog
+# noinspection PyUnresolvedReferences
 from google.colab import files
+# noinspection PyUnresolvedReferences
 from pushbullet import Pushbullet
 from tensorflow.python.layers import core as layers_core
 from tensorflow.python.platform import gfile
@@ -995,7 +997,7 @@ class Trainer:
                     for i in range(max_len):
                         reward_qi[batch][i] = p
 
-                if step % 5 == 0:
+                if True: #step % 5 == 0:
                     # greedy results from RL rl_model
                     replies = rl_model.infer(seq2seq_train_data[0],
                                              seq2seq_train_data[1])
@@ -1005,13 +1007,13 @@ class Trainer:
                     for batch in range(2):
                         print(
                             infer_helper.ids_to_string(
-                                seq2seq_train_data[0][:, i]))
-                        print("    [i] : {}".format(
+                                seq2seq_train_data[0][:, batch]))
+                        print("    [seq2] : {}".format(
                             infer_helper.ids_to_string(seq2seq_replies[batch])))
-                        print("    [s] : {}".format(
+                        print("    [RL greedy] : {}".format(
                             infer_helper.ids_to_string(replies[batch])))
-                        print("    [r]: {} {:.2f} => <= {:.2f}".format(
-                            infer_helper.ids_to_string(samples[i]),
+                        print("    [RL sample]: {} {:.2f} => <= {:.2f}".format(
+                            infer_helper.ids_to_string(samples[batch]),
                             reward_s[batch][0].item(),
                             reward_qi[batch][0].item()))
 
@@ -1354,6 +1356,7 @@ class ConversationTrainDataGenerator:
     #     line 2i+1: q_i
     #
     # (A) and (B) should share the vocabulary.
+    # noinspection PyUnusedLocal
     def generate(self, conversations_txt):
         basename, extension = os.path.splitext(conversations_txt)
         seq2seq_path = "{}_seq2seq{}".format(basename, extension)
@@ -1482,6 +1485,7 @@ class TrainDataGenerator:
             for w in vocab_list:
                 vocab_file.write(w + "\n")
 
+    # noinspection PyUnusedLocal,PyUnusedLocal
     def _generate_enc_dec(self):
         if gfile.Exists(self.enc_path) and gfile.Exists(self.dec_path):
             return
@@ -1878,87 +1882,5 @@ def test_tweets_large_swapped(hparams):
                                   should_clean_saved_model=False)
     return trainer.model
 
-
-class StreamListener(tweepy.StreamListener):
-    def __init__(self, api, helper):
-        self.api = api
-        self.helper = helper
-
-    def on_status(self, status):
-        # done handle @reply only
-        # done print reply
-        # add model parameter
-        # direct reply
-        # unk reply
-        # shuffle beam search
-        print("{0}: {1}".format(status.text, status.author.screen_name))
-
-        screen_name = status.author.screen_name
-        # ignore my tweets
-        if screen_name == self.api.me().screen_name:
-            print("Ignored my tweet")
-            return True
-        elif status.text.startswith("@{0}".format(self.api.me().screen_name)):
-
-            replies = self.helper.inferences(status.text)
-            reply = random.choice(replies)
-            reply = "@" + status.author.screen_name + " " + reply
-            print(reply)
-            self.api.update_status(status=reply,
-                                   in_reply_to_status_id=status.id)
-
-            return True
-
-    @staticmethod
-    def on_error(status_code, **kwargs):
-        print(status_code)
-        return True
-
-
-def listener(hparams):
-    Shell.download_model_data_if_necessary(hparams.model_path)
-
-    rl_train_graph = tf.Graph()
-    rl_infer_graph = tf.Graph()
-    rl_train_sess = tf.Session(graph=rl_train_graph)
-    rl_infer_sess = tf.Session(graph=rl_infer_graph)
-
-    _, infer_model = create_train_infer_models_in_graphs(rl_train_graph,
-                                                         rl_train_sess,
-                                                         rl_infer_graph,
-                                                         rl_infer_sess,
-                                                         hparams)
-
-    source_path = "tweets_large.txt"
-    Shell.download_file_if_necessary(source_path)
-    generator = TrainDataGenerator(source_path=source_path, hparams=hparams)
-    _, vocab, rev_vocab = generator.generate()
-    infer_model.restore()
-    helper = InferenceHelper(infer_model, vocab, rev_vocab)
-
-    config_yml = 'config.yml'
-    Shell.download_file_if_necessary(config_yml)
-    file = open(config_yml, 'rt')
-    cfg = yaml.load(file)['twitter']
-
-    consumer_key = cfg['consumer_key']
-    consumer_secret = cfg['consumer_secret']
-    access_token = cfg['access_token']
-    access_token_secret = cfg['access_token_secret']
-
-    auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-    auth.set_access_token(access_token, access_token_secret)
-    api = tweepy.API(auth)
-
-    while True:
-        #    try:
-        stream = tweepy.Stream(auth=api.auth,
-                               listener=StreamListener(api, helper))
-        print("listener starting...")
-        stream.userstream()
-
-
-#    except Exception as e:
-#     print(e.__doc__)
 
 print("module reloaded9")
