@@ -25,6 +25,7 @@ from tensorflow.python.layers import core as layers_core
 from tensorflow.python.platform import gfile
 from enum import Enum, auto
 
+
 class Mode(Enum):
     Test = auto()
     TrainSeq2Seq = auto()
@@ -886,9 +887,9 @@ class Trainer:
                  should_clean_saved_model=False):
         if tweets is None:
             tweets = []
-        print("===== Train Beam RL {} ====".format(seq2seq_source_path))
+        print("===== Train RL {} ====".format(seq2seq_source_path))
         now = datetime.datetime.today().strftime("%Y%m%d%H%M%S")
-        print("{}_beam_rl_test".format(now))
+        print("{}_rl_test".format(now))
         print("rl_hparams")
         print_hparams(rl_hparams)
 
@@ -901,15 +902,15 @@ class Trainer:
         if should_clean_saved_model:
             clean_model_path(rl_hparams.model_path)
         with tf.device(device):
-            model = self.create_model(rl_hparams)
+            rl_model = self.create_model(rl_hparams)
             seq2seq_model = self.create_model(seq2seq_hparams)
             backward_model = self.create_model(backward_hparams)
 
         vocab = seq2seq_data_source.vocab
         rev_vocab = seq2seq_data_source.rev_vocab
-        infer_helper = InferenceHelper(model, vocab, rev_vocab)
+        infer_helper = InferenceHelper(rl_model, vocab, rev_vocab)
 
-        graph = model.sess.graph
+        graph = rl_model.sess.graph
         _ = tf.summary.FileWriter(rl_hparams.model_path, graph)
         last_saved_time = datetime.datetime.now()
         with graph.as_default():
@@ -920,26 +921,16 @@ class Trainer:
             rl_train_data_next = \
                 rl_data_source.train_dataset.make_one_shot_iterator().get_next()
 
-            data = model.sess.run(seq2seq_train_data_next)
-            model.train(data[0], data[1], data[2], data[3], data[4])
+            data = rl_model.sess.run(seq2seq_train_data_next)
+            rl_model.train(data[0], data[1], data[2], data[3], data[4])
 
             avg_good_value = 0
             for step in range(rl_hparams.num_train_steps):
-                seq2seq_train_data = model.sess.run(seq2seq_train_data_next)
-                rl_train_data = model.sess.run(rl_train_data_next)
+                seq2seq_train_data = rl_model.sess.run(seq2seq_train_data_next)
+                rl_train_data = rl_model.sess.run(rl_train_data_next)
 
-                replies = model.infer(seq2seq_train_data[0],
-                                      seq2seq_train_data[1])
-                samples, _ = model.sample(seq2seq_train_data[0],
-                                          seq2seq_train_data[1])
-
-                for i in range(rl_hparams.batch_size):
-                    print(
-                        infer_helper.ids_to_string(seq2seq_train_data[0][:, i]))
-                    print("    [i] : {}".format(
-                        infer_helper.ids_to_string(replies[i])))
-                    print("    [s]: {}".format(
-                        infer_helper.ids_to_string(samples[i])))
+                samples, _ = rl_model.sample(seq2seq_train_data[0],
+                                             seq2seq_train_data[1])
 
                 batch_size = rl_hparams.batch_size
                 log_probs_sampled = seq2seq_model.log_probs_sampled(
@@ -975,7 +966,7 @@ class Trainer:
                 qi = rl_train_data[2]
 
                 a_enc_inputs, a_enc_inputs_lengths = self.format_enc_inputs(
-                    rl_hparams, model, samples)
+                    rl_hparams, rl_model, samples)
 
                 # [batch_size, dec_len, vocab_size]
                 log_probs = backward_model.log_probs(a_enc_inputs,
@@ -1004,11 +995,29 @@ class Trainer:
                     for i in range(max_len):
                         reward_qi[batch][i] = p
 
-                print("reward_qi", reward_qi)
+                if step % 5 == 0:
+                    # greedy results from RL rl_model
+                    replies = rl_model.infer(seq2seq_train_data[0],
+                                             seq2seq_train_data[1])
+                    seq2seq_replies = seq2seq_model.infer(seq2seq_train_data[0],
+                                                          seq2seq_train_data[1])
+
+                    for batch in range(2):
+                        print(
+                            infer_helper.ids_to_string(
+                                seq2seq_train_data[0][:, i]))
+                        print("    [i] : {}".format(
+                            infer_helper.ids_to_string(seq2seq_replies[batch])))
+                        print("    [s] : {}".format(
+                            infer_helper.ids_to_string(replies[batch])))
+                        print("    [r]: {} {0:.2f}-> <-{0:.2f}".format(
+                            infer_helper.ids_to_string(samples[i]),
+                            reward_s[batch][0].item(),
+                            reward_qi[batch][0].item()))
 
                 good_value = 1
                 good_value_key = "beam"
-                rl_hparams = model.hparams
+                rl_hparams = rl_model.hparams
                 reward = reward_s + reward_qi
 
                 avg_good_value += good_value
@@ -1018,16 +1027,16 @@ class Trainer:
                     self._print_log(good_value_key, avg_good_value / 60)
                     avg_good_value = 0
 
-                global_step = model.train_with_reward(seq2seq_train_data[0],
-                                                      seq2seq_train_data[1],
-                                                      samples,
-                                                      reward)
+                global_step = rl_model.train_with_reward(seq2seq_train_data[0],
+                                                         seq2seq_train_data[1],
+                                                         samples,
+                                                         reward)
                 if step != 0 and step % 100 == 0:
                     print("save and restore")
-                    model.save()
-                    is_restored = model.restore()
+                    rl_model.save()
+                    is_restored = rl_model.restore()
                     assert is_restored
-                    is_restored = model.restore()
+                    is_restored = rl_model.restore()
                     assert is_restored
                     self._print_inferences(step, tweets, infer_helper)
                     now = datetime.datetime.now()
