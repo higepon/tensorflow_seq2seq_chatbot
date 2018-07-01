@@ -26,6 +26,9 @@ from tensorflow.python.layers import core as layers_core
 from tensorflow.python.platform import gfile
 
 
+## TODO: remove beam_rl staff. Check every method names if they're being used. Check analyzer and fix all.
+
+
 class Mode(Enum):
     Test = auto()
     TrainSeq2Seq = auto()
@@ -262,12 +265,12 @@ class ChatbotModel:
         self.sampled = tf.placeholder(tf.int32, name="sampled")
 
         # Used to store previously inferred by beam_search.
-        self.beam_predicted_ids = tf.placeholder(tf.int32,
-                                                 name="beam_predicted_ids")
+#        self.beam_predicted_ids = tf.placeholder(tf.int32,
+#                                                 name="beam_predicted_ids")
         self.enc_inputs, self.enc_inputs_lengths, enc_outputs, enc_state, emb_encoder = self._build_encoder(
             hparams, scope)
 
-        self.dec_inputs, self.dec_tgt_lengths, self._logits, self.sample_logits, self.sample_replies, self.sample_log_probs_selected, self.infer_logits, self.replies, self.beam_replies, self.log_probs_beam_op = self._build_decoder(
+        self.dec_inputs, self.dec_tgt_lengths, self._logits, self.sample_logits, self.sample_replies, self.sample_log_probs_selected, self.infer_logits, self.replies, self.beam_replies = self._build_decoder(
             hparams, self.enc_inputs_lengths, emb_encoder,
             enc_state, enc_outputs)
         self._log_probs = tf.nn.log_softmax(self.infer_logits)
@@ -276,8 +279,8 @@ class ChatbotModel:
         self.tgt_labels, self.global_step, self.loss, self.train_op = self._build_seq2seq_optimizer(
             hparams, self._logits)
         self.rl_loss, self.rl_train_op = self._build_rl_optimizer(hparams)
-        self.beam_rl_loss, self.beam_rl_train_op = self._build_beam_rl_optimizer(
-            hparams)
+#self.beam_rl_loss, self.beam_rl_train_op = self._build_beam_rl_optimizer(
+#            hparams)
 
         self.train_loss_summary = tf.summary.scalar("loss", self.loss)
         self.val_loss_summary = tf.summary.scalar("validation_loss",
@@ -382,83 +385,83 @@ class ChatbotModel:
             feed_dict=feed_dict)
         return global_step
 
-    def log_probs_beam(self, enc_inputs, enc_inputs_lengths,
-                       beam_predicted_ids):
-        """ Return log_probs_beam: [[batch_size, dec_length, beam_size]
-            This is used in rl training, where we need P_seq2seq(a| p_i, q_i)
-        """
-        feed_dict = {
-            self.enc_inputs: enc_inputs,
-            self.enc_inputs_lengths: enc_inputs_lengths,
-            self.beam_predicted_ids: beam_predicted_ids,
-        }
+    # def log_probs_beam(self, enc_inputs, enc_inputs_lengths,
+    #                    beam_predicted_ids):
+    #     """ Return log_probs_beam: [[batch_size, dec_length, beam_size]
+    #         This is used in rl training, where we need P_seq2seq(a| p_i, q_i)
+    #     """
+    #     feed_dict = {
+    #         self.enc_inputs: enc_inputs,
+    #         self.enc_inputs_lengths: enc_inputs_lengths,
+    #         self.beam_predicted_ids: beam_predicted_ids,
+    #     }
+    #
+    #     return self.sess.run(self.log_probs_beam_op, feed_dict=feed_dict)
+    #
+    # def train_beam_with_reward(self, enc_inputs, enc_inputs_lengths,
+    #                            beam_predicted_ids,
+    #                            reward):
+    #     feed_dict = {
+    #         self.enc_inputs: enc_inputs,
+    #         self.enc_inputs_lengths: enc_inputs_lengths,
+    #         self.beam_predicted_ids: beam_predicted_ids,
+    #         self.reward: reward
+    #     }
+    #
+    #     _, global_step = self.sess.run(
+    #         [self.beam_rl_train_op, self.global_step],
+    #         feed_dict=feed_dict)
+    #     return global_step
 
-        return self.sess.run(self.log_probs_beam_op, feed_dict=feed_dict)
-
-    def train_beam_with_reward(self, enc_inputs, enc_inputs_lengths,
-                               beam_predicted_ids,
-                               reward):
-        feed_dict = {
-            self.enc_inputs: enc_inputs,
-            self.enc_inputs_lengths: enc_inputs_lengths,
-            self.beam_predicted_ids: beam_predicted_ids,
-            self.reward: reward
-        }
-
-        _, global_step = self.sess.run(
-            [self.beam_rl_train_op, self.global_step],
-            feed_dict=feed_dict)
-        return global_step
-
-    def reward_ease_of_answering(self, max_len, enc_inputs,
-                                 enc_inputs_lengths,
-                                 dull_responses):
-        """ Return reward for ease of answering.
-            See Deep Reinforcement Learning for Dialogue Generation
-            for more details.
-
-        Args:
-            enc_inputs: [encoder_length, batch_size], eg) tweets
-            dull_responses: [number of pre-defined dull responses,
-            decoder_length or less than decoder_length].
-            eg) [["I'm", "Good"], ["fine"]]
-
-        Returns:
-            Return reward for ease of answering.
-        """
-        inference_feed_dict = {
-            self.enc_inputs: enc_inputs,
-            self.enc_inputs_lengths: enc_inputs_lengths
-        }
-
-        # Logits
-        #   logits_value: [batch_size, actual_decoder_length, vocab_size]
-        logits_batch_value = self.sess.run(self.infer_logits,
-                                           feed_dict=inference_feed_dict)
-
-        # Note that encoder_inputs here is time major.
-        reward = np.ones((self.hparams.batch_size, max_len))
-        print(
-            "constructing reward{}{}".format(self.hparams.batch_size, max_len))
-        # For each batch: [actual_decoder_length, vocab_size]
-        for i, logits in enumerate(logits_batch_value):
-            p_array = []
-            for dull_response in dull_responses:
-                p = 1
-                # Note that dull_response and _logits don't
-                # always have same length, but zip takes care of the case.
-                for word_id, logit in zip(dull_response, logits):
-                    # Apply softmax first, see definition of softmax.
-                    norm = (self._softmax(logit))[word_id]
-                    p *= norm
-                # This is P(dull_response|encoder_input)
-                p = np.log(p) / len(dull_response)
-                p_array.append(p)
-            batch_p = np.sum(p_array) / len(dull_responses)
-            batch_reward = -batch_p
-            for j in range(max_len):
-                reward[i][j] = batch_reward
-        return reward
+    # def reward_ease_of_answering(self, max_len, enc_inputs,
+    #                              enc_inputs_lengths,
+    #                              dull_responses):
+    #     """ Return reward for ease of answering.
+    #         See Deep Reinforcement Learning for Dialogue Generation
+    #         for more details.
+    #
+    #     Args:
+    #         enc_inputs: [encoder_length, batch_size], eg) tweets
+    #         dull_responses: [number of pre-defined dull responses,
+    #         decoder_length or less than decoder_length].
+    #         eg) [["I'm", "Good"], ["fine"]]
+    #
+    #     Returns:
+    #         Return reward for ease of answering.
+    #     """
+    #     inference_feed_dict = {
+    #         self.enc_inputs: enc_inputs,
+    #         self.enc_inputs_lengths: enc_inputs_lengths
+    #     }
+    #
+    #     # Logits
+    #     #   logits_value: [batch_size, actual_decoder_length, vocab_size]
+    #     logits_batch_value = self.sess.run(self.infer_logits,
+    #                                        feed_dict=inference_feed_dict)
+    #
+    #     # Note that encoder_inputs here is time major.
+    #     reward = np.ones((self.hparams.batch_size, max_len))
+    #     print(
+    #         "constructing reward{}{}".format(self.hparams.batch_size, max_len))
+    #     # For each batch: [actual_decoder_length, vocab_size]
+    #     for i, logits in enumerate(logits_batch_value):
+    #         p_array = []
+    #         for dull_response in dull_responses:
+    #             p = 1
+    #             # Note that dull_response and _logits don't
+    #             # always have same length, but zip takes care of the case.
+    #             for word_id, logit in zip(dull_response, logits):
+    #                 # Apply softmax first, see definition of softmax.
+    #                 norm = (self._softmax(logit))[word_id]
+    #                 p *= norm
+    #             # This is P(dull_response|encoder_input)
+    #             p = np.log(p) / len(dull_response)
+    #             p_array.append(p)
+    #         batch_p = np.sum(p_array) / len(dull_responses)
+    #         batch_reward = -batch_p
+    #         for j in range(max_len):
+    #             reward[i][j] = batch_reward
+    #     return reward
 
     def save(self, model_path=None):
         if model_path is None:
@@ -508,30 +511,30 @@ class ChatbotModel:
                                                    loss)
         return loss, train_op
 
-    def _build_beam_rl_optimizer(self, hparams):
-        # todo mask the sampling results
-        beam_log_probs_shape = tf.shape(self.log_probs_beam_op)
-        beam_log_probs_shape_print = tf.Print(beam_log_probs_shape,
-                                              [beam_log_probs_shape,
-                                               tf.shape(self.infer_logits),
-                                               tf.shape(
-                                                   self.beam_predicted_ids),
-                                               tf.shape(self.beam_replies)],
-                                              "beam_log_probs_shape")
-        reward_shape = tf.shape(self.reward)
-        reward_shape_print = tf.Print(reward_shape, [reward_shape],
-                                      message="reward_shape")
-        asserts = [tf.assert_equal(beam_log_probs_shape_print,
-                                   reward_shape_print,
-                                   [beam_log_probs_shape_print,
-                                    self.reward])]
-        with tf.control_dependencies(asserts):
-            loss = -tf.reduce_sum(
-                self.log_probs_beam_op * self.reward) / tf.to_float(
-                hparams.batch_size * hparams.beam_width)
-        train_op = self._build_optimizer_with_loss(self.global_step, hparams,
-                                                   loss)
-        return loss, train_op
+    # def _build_beam_rl_optimizer(self, hparams):
+    #     # todo mask the sampling results
+    #     beam_log_probs_shape = tf.shape(self.log_probs_beam_op)
+    #     beam_log_probs_shape_print = tf.Print(beam_log_probs_shape,
+    #                                           [beam_log_probs_shape,
+    #                                            tf.shape(self.infer_logits),
+    #                                            tf.shape(
+    #                                                self.beam_predicted_ids),
+    #                                            tf.shape(self.beam_replies)],
+    #                                           "beam_log_probs_shape")
+    #     reward_shape = tf.shape(self.reward)
+    #     reward_shape_print = tf.Print(reward_shape, [reward_shape],
+    #                                   message="reward_shape")
+    #     asserts = [tf.assert_equal(beam_log_probs_shape_print,
+    #                                reward_shape_print,
+    #                                [beam_log_probs_shape_print,
+    #                                 self.reward])]
+    #     with tf.control_dependencies(asserts):
+    #         loss = -tf.reduce_sum(
+    #             self.log_probs_beam_op * self.reward) / tf.to_float(
+    #             hparams.batch_size * hparams.beam_width)
+    #     train_op = self._build_optimizer_with_loss(self.global_step, hparams,
+    #                                                loss)
+    #     return loss, train_op
 
     def _build_optimizer_with_loss(self, global_step, hparams, loss):
         params = tf.trainable_variables()
@@ -741,8 +744,8 @@ class ChatbotModel:
                                                          projection_layer,
                                                          self.scope)
 
-        beam_log_probs = self._log_probs_beam(infer_logits,
-                                              self.beam_predicted_ids)
+        # beam_log_probs = self._log_probs_beam(infer_logits,
+        #                                       self.beam_predicted_ids)
 
         # Sample Inference graph
         sample_logits, sample_replies = self._build_sample_inference(hparams,
@@ -756,7 +759,7 @@ class ChatbotModel:
         indices = self._convert_indices(self.sampled)
         sample_log_probs = tf.nn.log_softmax(sample_logits)
         sample_log_probs_selected = tf.gather_nd(sample_log_probs, indices)
-        return dec_inputs, dec_tgt_lengths, logits, sample_logits, sample_replies, sample_log_probs_selected, infer_logits, replies, beam_replies, beam_log_probs
+        return dec_inputs, dec_tgt_lengths, logits, sample_logits, sample_replies, sample_log_probs_selected, infer_logits, replies, beam_replies
 
     @staticmethod
     def _build_greedy_inference(hparams, embedding_encoder, enc_state,
@@ -969,35 +972,35 @@ class ChatbotModel:
     #     log_probs = tf.nn.log_softmax(logits)
     #     return tf.gather_nd(log_probs, ChatbotModel._convert_indices(
     #         sampled_ids))
-
-    @staticmethod
-    def _log_probs_beam(logits, predicted_ids):
-        """ Return log_probs for predicted_ids by beam search.
-
-        Args:
-            logits: [batch_size, dec_length, vocab_size]
-            predicted_ids: [batch_size, beam_width, dec_length]
-
-        Returns:
-            Return log_prob:[batch_size, beam_width, dec_length]
-      """
-
-        # Sum over vocab_size axis
-        log_probs = tf.nn.log_softmax(logits)
-
-        def one_log_probs(beam_index):
-            return tf.gather_nd(log_probs, ChatbotModel._convert_indices(
-                predicted_ids[:, beam_index]))
-
-        beam_width = tf.shape(predicted_ids)[1]
-        i = tf.constant(0)
-        outputs = tf.TensorArray(tf.float32, size=1, dynamic_size=True)
-        cond = lambda i, o: tf.less(i, beam_width)
-        body = lambda i, o: [tf.add(i, 1), o.write(i, one_log_probs(i))]
-
-        _, outputs = tf.while_loop(cond, body, [i, outputs])
-        result = tf.transpose(outputs.stack(), [1, 0, 2])
-        return result
+    #
+    # @staticmethod
+    # def _log_probs_beam(logits, predicted_ids):
+    #     """ Return log_probs for predicted_ids by beam search.
+    #
+    #     Args:
+    #         logits: [batch_size, dec_length, vocab_size]
+    #         predicted_ids: [batch_size, beam_width, dec_length]
+    #
+    #     Returns:
+    #         Return log_prob:[batch_size, beam_width, dec_length]
+    #   """
+    #
+    #     # Sum over vocab_size axis
+    #     log_probs = tf.nn.log_softmax(logits)
+    #
+    #     def one_log_probs(beam_index):
+    #         return tf.gather_nd(log_probs, ChatbotModel._convert_indices(
+    #             predicted_ids[:, beam_index]))
+    #
+    #     beam_width = tf.shape(predicted_ids)[1]
+    #     i = tf.constant(0)
+    #     outputs = tf.TensorArray(tf.float32, size=1, dynamic_size=True)
+    #     cond = lambda i, o: tf.less(i, beam_width)
+    #     body = lambda i, o: [tf.add(i, 1), o.write(i, one_log_probs(i))]
+    #
+    #     _, outputs = tf.while_loop(cond, body, [i, outputs])
+    #     result = tf.transpose(outputs.stack(), [1, 0, 2])
+    #     return result
 
 
 class TrainDataSource:
@@ -1027,10 +1030,11 @@ class Trainer:
         self.num_stats_per = 20
         self._valid_tweets = ["おはようございます。寒いですね。", "さて帰ろう。明日は早い。", "今回もよろしくです。"]
 
-    # TODO rename. this is not beam any more
-    def train_beam_rl(self, rl_hparams, seq2seq_hparams, backward_hparams,
-                      seq2seq_source_path, rl_source_path, tweets=[],
-                      should_clean_saved_model=False):
+    def train_rl(self, rl_hparams, seq2seq_hparams, backward_hparams,
+                 seq2seq_source_path, rl_source_path, tweets=None,
+                 should_clean_saved_model=False):
+        if tweets is None:
+            tweets = []
         print("===== Train Beam RL {} ====".format(seq2seq_source_path))
         now = datetime.datetime.today().strftime("%Y%m%d%H%M%S")
         print("{}_beam_rl_test".format(now))
@@ -1201,12 +1205,10 @@ class Trainer:
                 #         for i in range(max_len):
                 #             reward_qi[batch][i][beam] = p
 
-                # todo remove
-                global_step = 0
                 good_value = 1
                 good_value_key = "beam"
                 rl_hparams = model.hparams
-                #                reward = reward_s + reward_qi
+                reward = reward_s + reward_qi
 
                 avg_good_value += good_value
                 if step != 0 and step % 20 == 0:
@@ -1215,10 +1217,10 @@ class Trainer:
                     self._print_log(good_value_key, avg_good_value / 60)
                     avg_good_value = 0
 
-                # global_step = model.train_beam_with_reward(seq2seq_train_data[0],
-                #                                            seq2seq_train_data[1],
-                #                                            beam_predicted_ids,
-                #                                            reward)
+                global_step = model.train_with_reward(seq2seq_train_data[0],
+                                                            seq2seq_train_data[1],
+                                                            samples,
+                                                            reward)
                 if step != 0 and step % 100 == 0:
                     print("save and restore")
                     model.save()
@@ -1844,7 +1846,9 @@ class TrainDataGenerator:
                     temp = None
         return dest_path
 
-    def _build_vocab_dic(self, source_path, vocab_dic={}):
+    def _build_vocab_dic(self, source_path, vocab_dic=None):
+        if vocab_dic is None:
+            vocab_dic = {}
         with gfile.GFile(source_path, mode="r") as f:
             for line in f:
                 words = self.tagger.parse(line).split()
