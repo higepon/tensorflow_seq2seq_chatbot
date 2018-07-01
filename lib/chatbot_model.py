@@ -1010,7 +1010,7 @@ class Trainer:
                             infer_helper.ids_to_string(seq2seq_replies[batch])))
                         print("    [s] : {}".format(
                             infer_helper.ids_to_string(replies[batch])))
-                        print("    [r]: {} {.2f}-> <-{.2f}".format(
+                        print("    [r]: {} {:.2f}-> <-{:.2f}".format(
                             infer_helper.ids_to_string(samples[i]),
                             reward_s[batch][0].item(),
                             reward_qi[batch][0].item()))
