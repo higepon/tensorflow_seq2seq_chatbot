@@ -317,11 +317,11 @@ class ChatbotModel:
         }
         return self.sess.run(self._log_probs, feed_dict=infer_feed_dic)
 
-    def log_probs_selected(self, enc_inputs, enc_inputs_lengths, ids):
+    def log_probs_sampled(self, enc_inputs, enc_inputs_lengths, sampled):
         infer_feed_dic = {
             self.enc_inputs: enc_inputs,
             self.enc_inputs_lengths: enc_inputs_lengths,
-            self.sample: ids
+            self.sampled: sampled
         }
         return self.sess.run(self.sample_log_probs_selected, feed_dict=infer_feed_dic)
 
@@ -1082,9 +1082,31 @@ class Trainer:
                     print("    [s]: {}".format(
                         infer_helper.ids_to_string(samples[i])))
 
-                log_probs_sampled = seq2seq_model.log_probs_selected(seq2seq_train_data[0],
-                                                                     seq2seq_train_data[1],
-                                                                     samples)
+                batch_size = rl_hparams.batch_size
+                log_probs_sampled = seq2seq_model.log_probs_sampled(seq2seq_train_data[0],
+                                                                    seq2seq_train_data[1],
+                                                                    samples)
+
+                # Calc 1/N_a * logP_seq2seq(a|p_i, q_i) for each sampled.
+                max_len = len(samples[0])
+
+                reward_s = np.zeros((batch_size, max_len))
+
+                for batch in range(batch_size):
+                    tweet = samples[batch]
+                    tweet_len = 0
+                    p = 0
+                    for i in range(len(tweet)):
+                        p += log_probs_sampled[batch][i]
+                        tweet_len = tweet_len + 1
+                        if tweet[i] == rl_hparams.eos_id:
+                            break
+                    assert (tweet_len != 0)
+                    p /= tweet_len
+                    for i in range(max_len):
+                        reward_s[batch][i] = p
+
+                print(reward_s)
 
                 # beam_predicted_ids, _ = model.infer_beam_search(seq2seq_train_data[0],
                 #                                                 seq2seq_train_data[1])
@@ -1095,8 +1117,6 @@ class Trainer:
                 #                                               seq2seq_train_data[1],
                 #                                               beam_predicted_ids)
 
-                batch_size = rl_hparams.batch_size
-                beam_width = rl_hparams.beam_width
                 # Calc 1/N_a * logP_seq2seq(a|p_i, q_i) for each beam_predicted
                 # reward_s = np.zeros(
                 #     (batch_size, max_len, beam_width))
