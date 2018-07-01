@@ -10,7 +10,6 @@ import os.path
 import random as random
 import re
 import shutil
-from enum import Enum, auto
 
 import MeCab
 import easy_tf_log
@@ -24,11 +23,7 @@ from google.colab import files
 from pushbullet import Pushbullet
 from tensorflow.python.layers import core as layers_core
 from tensorflow.python.platform import gfile
-
-
-# TODO: remove beam_rl staff. Check every method names if they're being used.
-#  Check analyzer and fix all.
-
+from enum import Enum, auto
 
 class Mode(Enum):
     Test = auto()
@@ -182,11 +177,6 @@ pb = Pushbullet(push_key)
 print(tf.__version__)
 
 
-def info(message, hparams):
-    if hparams.debug_verbose:
-        print(message)
-
-
 def has_gpu0():
     return tf.test.gpu_device_name() == "/device:GPU:0"
 
@@ -215,8 +205,6 @@ class ModelDirectory(Enum):
             os.makedirs(d.value, exist_ok=True)
 
 
-# todo
-# collect all initializer
 ModelDirectory.create_all_directories()
 
 base_hparams = tf.contrib.training.HParams(
@@ -245,12 +233,6 @@ base_hparams = tf.contrib.training.HParams(
     pad_token="[PAD]",
     unk_token="[UNK]",
 )
-
-test_hparams = copy.deepcopy(base_hparams).override_from_dict(
-    {'beam_width': 0, 'num_train_steps': 100, 'learning_rate': 0.5})
-
-test_attention_hparams = copy.deepcopy(test_hparams).override_from_dict(
-    {'use_attention': True})
 
 # For debug purpose.
 tf.reset_default_graph()
@@ -1724,17 +1706,6 @@ def make_test_training_data(hparams):
 
         if i == 0:
             first_tweet = tweet
-            info("0th tweet={}".format(tweet), hparams)
-            info("0th reply_with_eos_suffix={}".format(training_target_label),
-                 hparams)
-            info("0th reply_with_sos_prefix={}".format(training_decoder_input),
-                 hparams)
-
-        info("Tweets", hparams)
-        info(train_encoder_inputs, hparams)
-        info("Replies", hparams)
-        info(training_target_labels, hparams)
-        info(training_decoder_inputs, hparams)
     return first_tweet, train_encoder_inputs, train_encoder_inputs_lengths, \
            training_target_labels, training_decoder_inputs
 
@@ -1855,10 +1826,12 @@ def test_distributed_pattern(hparams):
 
 
 def test_distributed_one(enable_attention):
-    hparams = copy.deepcopy(test_hparams).override_from_dict({
+    hparams = copy.deepcopy(base_hparams).override_from_dict({
         'model_path': ModelDirectory.test_distributed.value,
         'use_attention': enable_attention,
         'beam_width': 2,
+        'num_train_steps': 100,
+        'learning_rate': 0.5
     })
     test_distributed_pattern(hparams)
 
