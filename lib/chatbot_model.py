@@ -1106,7 +1106,38 @@ class Trainer:
                     for i in range(max_len):
                         reward_s[batch][i] = p
 
-                print(reward_s)
+                # Calc 1/N_qi * logP_backward(qi|a)
+                # TODO: Vectorized implementation here.
+                reward_qi = np.zeros((batch_size, max_len))
+
+                # target label with eos.
+                # [batch_size, dec_length]
+                qi = rl_train_data[2]
+
+                a_enc_inputs, a_enc_inputs_lengths = self.format_enc_inputs(rl_hparams, model, samples)
+
+                # [batch_size, dec_len, vocab_size]
+                log_probs = backward_model.log_probs(a_enc_inputs, a_enc_inputs_lengths)
+                for batch in range(batch_size):
+                    tweet = qi[batch]
+                    tweet_len = 0
+                    p = 0
+                    for i, id in enumerate(tweet):
+                        # log_probs shape is supposed to be [batch_size, dec_length, vocab_size],
+                        # but it sometimes becomes [batch_size, smaller_value, vocab_size].
+                        # This is because we're using GreedyDecoder, dynamic_decode finishes the decoder process when it sees eos_id.
+                        # If all enc_inputs ends up shorter dec_output, we can have smaller_value here.
+                      if i < len(log_probs[batch]):
+                          p += log_probs[batch][i][id]
+                      tweet_len = tweet_len + 1
+                      if id == rl_hparams.eos_id:
+                          break
+                    assert (tweet_len != 0)
+                    p /= tweet_len
+                    for i in range(max_len):
+                        reward_qi[batch][i] = p
+
+                print("reward_qi", reward_qi)
 
                 # beam_predicted_ids, _ = model.infer_beam_search(seq2seq_train_data[0],
                 #                                                 seq2seq_train_data[1])
