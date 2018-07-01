@@ -265,8 +265,8 @@ class ChatbotModel:
         self.sampled = tf.placeholder(tf.int32, name="sampled")
 
         # Used to store previously inferred by beam_search.
-#        self.beam_predicted_ids = tf.placeholder(tf.int32,
-#                                                 name="beam_predicted_ids")
+        #        self.beam_predicted_ids = tf.placeholder(tf.int32,
+        #                                                 name="beam_predicted_ids")
         self.enc_inputs, self.enc_inputs_lengths, enc_outputs, enc_state, emb_encoder = self._build_encoder(
             hparams, scope)
 
@@ -324,8 +324,8 @@ class ChatbotModel:
             self.enc_inputs_lengths: enc_inputs_lengths,
             self.sampled: sampled
         }
-        return self.sess.run(self.sample_log_probs_selected, feed_dict=infer_feed_dic)
-
+        return self.sess.run(self.sample_log_probs_selected,
+                             feed_dict=infer_feed_dic)
 
     def infer_beam_search(self, enc_inputs, enc_inputs_lengths):
         """
@@ -382,7 +382,6 @@ class ChatbotModel:
             [self.rl_train_op, self.global_step],
             feed_dict=feed_dict)
         return global_step
-
 
     def save(self, model_path=None):
         if model_path is None:
@@ -852,6 +851,7 @@ class ChatbotModel:
         return tf.stack([print_first_indices, second_indices, sampled_indices],
                         axis=2)
 
+
 class TrainDataSource:
     def __init__(self, source_path, hparams, vocab_path=None):
         Shell.download_file_if_necessary(source_path)
@@ -936,9 +936,10 @@ class Trainer:
                         infer_helper.ids_to_string(samples[i])))
 
                 batch_size = rl_hparams.batch_size
-                log_probs_sampled = seq2seq_model.log_probs_sampled(seq2seq_train_data[0],
-                                                                    seq2seq_train_data[1],
-                                                                    samples)
+                log_probs_sampled = seq2seq_model.log_probs_sampled(
+                    seq2seq_train_data[0],
+                    seq2seq_train_data[1],
+                    samples)
 
                 # Calc 1/N_a * logP_seq2seq(a|p_i, q_i) for each sampled.
                 max_len = len(samples[0])
@@ -967,10 +968,12 @@ class Trainer:
                 # [batch_size, dec_length]
                 qi = rl_train_data[2]
 
-                a_enc_inputs, a_enc_inputs_lengths = self.format_enc_inputs(rl_hparams, model, samples)
+                a_enc_inputs, a_enc_inputs_lengths = self.format_enc_inputs(
+                    rl_hparams, model, samples)
 
                 # [batch_size, dec_len, vocab_size]
-                log_probs = backward_model.log_probs(a_enc_inputs, a_enc_inputs_lengths)
+                log_probs = backward_model.log_probs(a_enc_inputs,
+                                                     a_enc_inputs_lengths)
                 for batch in range(batch_size):
                     tweet = qi[batch]
                     tweet_len = 0
@@ -980,18 +983,17 @@ class Trainer:
                         # but it sometimes becomes [batch_size, smaller_value, vocab_size].
                         # This is because we're using GreedyDecoder, dynamic_decode finishes the decoder process when it sees eos_id.
                         # If all enc_inputs ends up shorter dec_output, we can have smaller_value here.
-                      if i < len(log_probs[batch]):
-                          p += log_probs[batch][i][id]
-                      tweet_len = tweet_len + 1
-                      if id == rl_hparams.eos_id:
-                          break
+                        if i < len(log_probs[batch]):
+                            p += log_probs[batch][i][id]
+                        tweet_len = tweet_len + 1
+                        if id == rl_hparams.eos_id:
+                            break
                     assert (tweet_len != 0)
                     p /= tweet_len
                     for i in range(max_len):
                         reward_qi[batch][i] = p
 
                 print("reward_qi", reward_qi)
-
 
                 good_value = 1
                 good_value_key = "beam"
@@ -1006,9 +1008,9 @@ class Trainer:
                     avg_good_value = 0
 
                 global_step = model.train_with_reward(seq2seq_train_data[0],
-                                                            seq2seq_train_data[1],
-                                                            samples,
-                                                            reward)
+                                                      seq2seq_train_data[1],
+                                                      samples,
+                                                      reward)
                 if step != 0 and step % 100 == 0:
                     print("save and restore")
                     model.save()
