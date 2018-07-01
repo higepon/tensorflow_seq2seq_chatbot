@@ -267,7 +267,7 @@ class ChatbotModel:
         self.enc_inputs, self.enc_inputs_lengths, enc_outputs, enc_state, emb_encoder = self._build_encoder(
             hparams, scope)
 
-        self.dec_inputs, self.dec_tgt_lengths, self._logits, self.sample_logits, self.sample_replies, self.sample_log_prob, self.infer_logits, self.replies, self.beam_replies, self.log_probs_beam_op = self._build_decoder(
+        self.dec_inputs, self.dec_tgt_lengths, self._logits, self.sample_logits, self.sample_replies, self.sample_log_probs_selected, self.infer_logits, self.replies, self.beam_replies, self.log_probs_beam_op = self._build_decoder(
             hparams, self.enc_inputs_lengths, emb_encoder,
             enc_state, enc_outputs)
         self._log_probs = tf.nn.log_softmax(self.infer_logits)
@@ -316,6 +316,15 @@ class ChatbotModel:
             self.enc_inputs_lengths: enc_inputs_lengths,
         }
         return self.sess.run(self._log_probs, feed_dict=infer_feed_dic)
+
+    def log_probs_selected(self, enc_inputs, enc_inputs_lengths, ids):
+        infer_feed_dic = {
+            self.enc_inputs: enc_inputs,
+            self.enc_inputs_lengths: enc_inputs_lengths,
+            self.sample: ids
+        }
+        return self.sess.run(self.sample_log_probs_selected, feed_dict=infer_feed_dic)
+
 
     def infer_beam_search(self, enc_inputs, enc_inputs_lengths):
         """
@@ -473,7 +482,7 @@ class ChatbotModel:
 
     def _build_rl_optimizer(self, hparams):
         # todo mask the sampling results
-        sample_log_prob_shape = tf.shape(self.sample_log_prob)
+        sample_log_prob_shape = tf.shape(self.sample_log_probs_selected)
         reward_shape = tf.shape(self.reward)
         reward_shape_print = tf.Print(reward_shape,
                                       [reward_shape],
@@ -484,16 +493,16 @@ class ChatbotModel:
 
         asserts = [tf.assert_equal(sample_log_prob_shape[0],
                                    reward_shape_print[0],
-                                   [self.sample_log_prob,
+                                   [self.sample_log_probs_selected,
                                     self.reward]),
                    tf.assert_equal(sample_log_prob_shape[1],
                                    reward_shape_print[1],
-                                   [self.sample_log_prob,
+                                   [self.sample_log_probs_selected,
                                     self.reward]), reward_print
                    ]
         with tf.control_dependencies(asserts):
             loss = -tf.reduce_sum(
-                self.sample_log_prob * self.reward) / tf.to_float(
+                self.sample_log_probs_selected * self.reward) / tf.to_float(
                 hparams.batch_size)
         train_op = self._build_optimizer_with_loss(self.global_step, hparams,
                                                    loss)
@@ -745,18 +754,9 @@ class ChatbotModel:
                                                                      projection_layer,
                                                                      self.scope)
         indices = self._convert_indices(self.sampled)
-        #        print_indices0 = tf.Print(indices, [tf.shape(indices)],
-        #                                  message="OPT:indices.shape")
-        #        print_indices1 = tf.Print(print_indices0, [tf.shape(sample_logits)],
-        #                                  message="OPT:sample_logits.shape")
-        #        print_indices2 = tf.Print(print_indices1, [tf.shape(sample_replies)],
-        #                                  message="OPT:sample_replies.shape")
-
-        sample_log_prob = tf.gather_nd(sample_logits, indices)
-        sample_log_prob0 = tf.Print(sample_log_prob,
-                                    [tf.shape(sample_log_prob)],
-                                    message="OPT:sample_log_prob")
-        return dec_inputs, dec_tgt_lengths, logits, sample_logits, sample_replies, sample_log_prob0, infer_logits, replies, beam_replies, beam_log_probs
+        sample_log_probs = tf.nn.log_softmax(sample_logits)
+        sample_log_probs_selected = tf.gather_nd(sample_log_probs, indices)
+        return dec_inputs, dec_tgt_lengths, logits, sample_logits, sample_replies, sample_log_probs_selected, infer_logits, replies, beam_replies, beam_log_probs
 
     @staticmethod
     def _build_greedy_inference(hparams, embedding_encoder, enc_state,
@@ -953,6 +953,23 @@ class ChatbotModel:
         return tf.stack([print_first_indices, second_indices, sampled_indices],
                         axis=2)
 
+    # @staticmethod
+    # def _build_log_probs(logits, sampled_ids):
+    #     """ Return log_probs for sample_ids
+    #
+    #     Args:
+    #         logits: [batch_size, dec_length, vocab_size]
+    #         sampled_ids: [batch_size, dec_length]
+    #
+    #     Returns:
+    #         Return log_prob:[batch_size, dec_length]
+    #   """
+    #
+    #     # Sum over vocab_size axis
+    #     log_probs = tf.nn.log_softmax(logits)
+    #     return tf.gather_nd(log_probs, ChatbotModel._convert_indices(
+    #         sampled_ids))
+
     @staticmethod
     def _log_probs_beam(logits, predicted_ids):
         """ Return log_probs for predicted_ids by beam search.
@@ -1010,6 +1027,7 @@ class Trainer:
         self.num_stats_per = 20
         self._valid_tweets = ["おはようございます。寒いですね。", "さて帰ろう。明日は早い。", "今回もよろしくです。"]
 
+    # TODO rename. this is not beam any more
     def train_beam_rl(self, rl_hparams, seq2seq_hparams, backward_hparams,
                       seq2seq_source_path, rl_source_path, tweets=[],
                       should_clean_saved_model=False):
@@ -1063,6 +1081,10 @@ class Trainer:
                         infer_helper.ids_to_string(replies[i])))
                     print("    [s]: {}".format(
                         infer_helper.ids_to_string(samples[i])))
+
+                log_probs_sampled = seq2seq_model.log_probs_selected(seq2seq_train_data[0],
+                                                                     seq2seq_train_data[1],
+                                                                     samples)
 
                 # beam_predicted_ids, _ = model.infer_beam_search(seq2seq_train_data[0],
                 #                                                 seq2seq_train_data[1])
