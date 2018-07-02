@@ -923,7 +923,6 @@ class Trainer:
             rl_train_data_next = \
                 rl_data_source.train_dataset.make_one_shot_iterator().get_next()
 
-            data = rl_model.sess.run(seq2seq_train_data_next)
             avg_good_value = 0
             for step in range(rl_hparams.num_train_steps):
                 seq2seq_train_data = rl_model.sess.run(seq2seq_train_data_next)
@@ -1010,9 +1009,10 @@ class Trainer:
                             infer_helper.ids_to_string(seq2seq_replies[batch])))
                         print("    [RL greedy] : {}".format(
                             infer_helper.ids_to_string(replies[batch])))
-                        print("    [RL sample]: {} {:.2f} => <= {:.2f}".format(
+                        print("    [RL sample]: {} {:.2f} => ({:.2f}) <= {:.2f}".format(
                             infer_helper.ids_to_string(samples[batch]),
                             reward_s[batch][0].item(),
+                            reward_s[batch][0].item() + reward_qi[batch][0].item(),
                             reward_qi[batch][0].item()))
 
                 good_value = 1
