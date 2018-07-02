@@ -924,8 +924,6 @@ class Trainer:
                 rl_data_source.train_dataset.make_one_shot_iterator().get_next()
 
             data = rl_model.sess.run(seq2seq_train_data_next)
-            rl_model.train(data[0], data[1], data[2], data[3], data[4])
-
             avg_good_value = 0
             for step in range(rl_hparams.num_train_steps):
                 seq2seq_train_data = rl_model.sess.run(seq2seq_train_data_next)
