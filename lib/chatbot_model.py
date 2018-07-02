@@ -994,6 +994,10 @@ class Trainer:
                     for i in range(max_len):
                         reward_qi[batch][i] = p
 
+                reward = reward_s + reward_qi
+                reward_avg = np.sum(reward) / max_len / batch_size
+                self._print_log("reward_avg", reward_avg)
+
                 if True: #step % 5 == 0:
                     # greedy results from RL rl_model
                     replies = rl_model.infer(seq2seq_train_data[0],
@@ -1018,8 +1022,6 @@ class Trainer:
                 good_value = 1
                 good_value_key = "beam"
                 rl_hparams = rl_model.hparams
-                reward = reward_s + reward_qi
-
                 avg_good_value += good_value
                 if step != 0 and step % 20 == 0:
                     print("{}:{}".format(good_value_key, good_value))
