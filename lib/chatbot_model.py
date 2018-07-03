@@ -953,7 +953,8 @@ class Trainer:
                             break
                     assert (tweet_len != 0)
                     p /= tweet_len
-                    for i in range(max_len):
+                    # reward is zero, after eos. So that we can ignore them.
+                    for i in range(tweet_len):
                         reward_s[batch][i] = p
 
                 # Calc 1/N_qi * logP_backward(qi|a)
@@ -991,11 +992,19 @@ class Trainer:
                             break
                     assert (tweet_len != 0)
                     p /= tweet_len
-                    for i in range(max_len):
+                    # reward is zero, after eos. So that we can ignore them.
+                    for i in range(tweet_len):
                         reward_qi[batch][i] = p
 
                 reward = reward_s + reward_qi
                 reward_avg = np.sum(reward) / max_len / batch_size
+
+
+                # standardize reward
+                reward -= np.mean(reward)
+                reward /= (np.std(reward))
+
+
                 self._print_log("reward_avg", reward_avg)
 
                 if True: #step % 5 == 0:
