@@ -1040,7 +1040,7 @@ class Trainer:
                 if i < len(log_probs[batch]):
                     p += log_probs[batch][i][word_id]
                 tweet_len = tweet_len + 1
-                if word_id == rl_hparams.eos_id:
+                if word_id == hparams.eos_id:
                     break
             assert (tweet_len != 0)
             p /= tweet_len
