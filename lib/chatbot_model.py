@@ -923,121 +923,75 @@ class Trainer:
             rl_train_data_next = \
                 rl_data_source.train_dataset.make_one_shot_iterator().get_next()
 
-            avg_good_value = 0
             for step in range(rl_hparams.num_train_steps):
                 seq2seq_train_data = rl_model.sess.run(seq2seq_train_data_next)
                 rl_train_data = rl_model.sess.run(rl_train_data_next)
 
+                batch_size = rl_hparams.batch_size
+
+                # Sample!
                 samples, _ = rl_model.sample(seq2seq_train_data[0],
                                              seq2seq_train_data[1])
 
-                batch_size = rl_hparams.batch_size
-                log_probs_sampled = seq2seq_model.log_probs_sampled(
-                    seq2seq_train_data[0],
-                    seq2seq_train_data[1],
-                    samples)
-
                 # Calc 1/N_a * logP_seq2seq(a|p_i, q_i) for each sampled.
-                max_len = len(samples[0])
-
-                reward_s = np.zeros((batch_size, max_len))
-
-                for batch in range(batch_size):
-                    tweet = samples[batch]
-                    tweet_len = 0
-                    p = 0
-                    for i in range(len(tweet)):
-                        p += log_probs_sampled[batch][i]
-                        tweet_len = tweet_len + 1
-                        if tweet[i] == rl_hparams.eos_id:
-                            break
-                    assert (tweet_len != 0)
-                    p /= tweet_len
-                    # reward is zero, after eos. So that we can ignore them.
-                    for i in range(tweet_len):
-                        reward_s[batch][i] = p
+                max_len, reward_s = self.calc_reward_s(seq2seq_model,
+                                                       seq2seq_train_data,
+                                                       samples)
 
                 # Calc 1/N_qi * logP_backward(qi|a)
                 # TODO: Vectorized implementation here.
-                reward_qi = np.zeros((batch_size, max_len))
-
-                # target label with eos.
-                # [batch_size, dec_length]
-                qi = rl_train_data[2]
-
-                a_enc_inputs, a_enc_inputs_lengths = self.format_enc_inputs(
-                    rl_hparams, rl_model, samples)
-
-                # [batch_size, dec_len, vocab_size]
-                log_probs = backward_model.log_probs(a_enc_inputs,
-                                                     a_enc_inputs_lengths)
-                for batch in range(batch_size):
-                    tweet = qi[batch]
-                    tweet_len = 0
-                    p = 0
-                    for i, word_id in enumerate(tweet):
-                        # log_probs shape is supposed to be [batch_size,
-                        # dec_length, vocab_size],
-                        # but it sometimes becomes [batch_size,
-                        # smaller_value, vocab_size].
-                        # This is because we're using GreedyDecoder,
-                        # dynamic_decode finishes the decoder process when it
-                        #  sees eos_id.
-                        # If all enc_inputs ends up shorter dec_output,
-                        # we can have smaller_value here.
-                        if i < len(log_probs[batch]):
-                            p += log_probs[batch][i][word_id]
-                        tweet_len = tweet_len + 1
-                        if word_id == rl_hparams.eos_id:
-                            break
-                    assert (tweet_len != 0)
-                    p /= tweet_len
-                    # reward is zero, after eos. So that we can ignore them.
-                    for i in range(tweet_len):
-                        reward_qi[batch][i] = p
+                reward_qi = self.calc_reward_qi(backward_model, max_len,
+                                                rl_train_data, samples)
 
                 reward = reward_s + reward_qi
                 reward_avg = np.sum(reward) / max_len / batch_size
-
 
                 # standardize reward
                 reward -= np.mean(reward)
                 reward /= (np.std(reward))
 
-
                 self._print_log("reward_avg", reward_avg)
 
-                if True: #step % 5 == 0:
+                if True:  # step % 5 == 0:
                     # greedy results from RL rl_model
                     replies = rl_model.infer(seq2seq_train_data[0],
                                              seq2seq_train_data[1])
+
                     seq2seq_replies = seq2seq_model.infer(seq2seq_train_data[0],
                                                           seq2seq_train_data[1])
+
+                    # This is for debug to see if reward_s looks reasonable
+                    max_len_seq2seq, reward_s_seq2seq = self.calc_reward_s(
+                        seq2seq_model,
+                        seq2seq_train_data,
+                        seq2seq_replies)
+
+                    reward_qi_seq2seq = self.calc_reward_qi(backward_model,
+                                                            max_len_seq2seq,
+                                                            rl_train_data,
+                                                            seq2seq_replies)
 
                     for batch in range(2):
                         print(
                             infer_helper.ids_to_string(
                                 seq2seq_train_data[0][:, batch]))
-                        print("    [seq2] : {}".format(
-                            infer_helper.ids_to_string(seq2seq_replies[batch])))
+                        print("    [seq2] : {} {:.2f} => ({:.2f}) <= {:.2f}".format(
+                            infer_helper.ids_to_string(seq2seq_replies[batch]),
+                            reward_s_seq2seq[batch][0].item(),
+                            reward_s_seq2seq[batch][0].item() + reward_qi_seq2seq[batch][
+                                0].item(),
+                            reward_qi_seq2seq[batch][0].item()))
                         print("    [RL greedy] : {}".format(
                             infer_helper.ids_to_string(replies[batch])))
-                        print("    [RL sample]: {} {:.2f} => ({:.2f}) <= {:.2f}".format(
-                            infer_helper.ids_to_string(samples[batch]),
-                            reward_s[batch][0].item(),
-                            reward_s[batch][0].item() + reward_qi[batch][0].item(),
-                            reward_qi[batch][0].item()))
+                        print(
+                            "    [RL sample]: {} {:.2f} => ({:.2f}) <= {:.2f}".format(
+                                infer_helper.ids_to_string(samples[batch]),
+                                reward_s[batch][0].item(),
+                                reward_s[batch][0].item() + reward_qi[batch][
+                                    0].item(),
+                                reward_qi[batch][0].item()))
 
-                good_value = 1
-                good_value_key = "beam"
                 rl_hparams = rl_model.hparams
-                avg_good_value += good_value
-                if step != 0 and step % 20 == 0:
-                    print("{}:{}".format(good_value_key, good_value))
-                if step != 0 and step % 60 == 0:
-                    self._print_log(good_value_key, avg_good_value / 60)
-                    avg_good_value = 0
-
                 global_step = rl_model.train_with_reward(seq2seq_train_data[0],
                                                          seq2seq_train_data[1],
                                                          samples,
@@ -1055,6 +1009,70 @@ class Trainer:
                     last_saved_time = now
                     assert is_restored
                     print("step={}, global_step={}".format(step, global_step))
+
+    def calc_reward_qi(self, backward_model, max_len, train_data, samples):
+        hparams = backward_model.hparams
+        batch_size = hparams.batch_size
+
+        reward_qi = np.zeros((batch_size, max_len))
+        # target label with eos.
+        # [batch_size, dec_length]
+        qi = train_data[2]
+        a_enc_inputs, a_enc_inputs_lengths = self.format_enc_inputs(
+            hparams, backward_model, samples)
+        # [batch_size, dec_len, vocab_size]
+        log_probs = backward_model.log_probs(a_enc_inputs,
+                                             a_enc_inputs_lengths)
+        for batch in range(batch_size):
+            tweet = qi[batch]
+            tweet_len = 0
+            p = 0
+            for i, word_id in enumerate(tweet):
+                # log_probs shape is supposed to be [batch_size,
+                # dec_length, vocab_size],
+                # but it sometimes becomes [batch_size,
+                # smaller_value, vocab_size].
+                # This is because we're using GreedyDecoder,
+                # dynamic_decode finishes the decoder process when it
+                #  sees eos_id.
+                # If all enc_inputs ends up shorter dec_output,
+                # we can have smaller_value here.
+                if i < len(log_probs[batch]):
+                    p += log_probs[batch][i][word_id]
+                tweet_len = tweet_len + 1
+                if word_id == rl_hparams.eos_id:
+                    break
+            assert (tweet_len != 0)
+            p /= tweet_len
+            # reward is zero, after eos. So that we can ignore them.
+            for i in range(tweet_len):
+                reward_qi[batch][i] = p
+        return reward_qi
+
+    @staticmethod
+    def calc_reward_s(seq2seq_model, train_data, samples):
+        log_probs_sampled = seq2seq_model.log_probs_sampled(
+            train_data[0],
+            train_data[1],
+            samples)
+        max_len = len(samples[0])
+        batch_size = seq2seq_model.hparams.batch_size
+        reward_s = np.zeros((batch_size, max_len))
+        for batch in range(batch_size):
+            tweet = samples[batch]
+            tweet_len = 0
+            p = 0
+            for i in range(len(tweet)):
+                p += log_probs_sampled[batch][i]
+                tweet_len = tweet_len + 1
+                if tweet[i] == seq2seq_model.hparams.eos_id:
+                    break
+            assert (tweet_len != 0)
+            p /= tweet_len
+            # reward is zero, after eos. So that we can ignore them.
+            for i in range(tweet_len):
+                reward_s[batch][i] = p
+        return max_len, reward_s
 
     @staticmethod
     def format_enc_inputs(hparams, model, replies):
