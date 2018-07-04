@@ -962,13 +962,12 @@ class Trainer:
                                                           seq2seq_train_data[1])
 
                     # This is for debug to see if reward_s looks reasonable
-                    max_len_seq2seq, reward_s_seq2seq = self.calc_reward_s(
+                    reward_s_seq2seq = self.calc_reward_s(
                         seq2seq_model,
                         seq2seq_train_data,
                         seq2seq_replies)
 
                     reward_qi_seq2seq = self.calc_reward_qi(backward_model,
-                                                            max_len_seq2seq,
                                                             rl_train_data,
                                                             seq2seq_replies)
 
@@ -976,12 +975,15 @@ class Trainer:
                         print(
                             infer_helper.ids_to_string(
                                 seq2seq_train_data[0][:, batch]))
-                        print("    [seq2] : {} {:.2f} => ({:.2f}) <= {:.2f}".format(
-                            infer_helper.ids_to_string(seq2seq_replies[batch]),
-                            reward_s_seq2seq[batch][0].item(),
-                            reward_s_seq2seq[batch][0].item() + reward_qi_seq2seq[batch][
-                                0].item(),
-                            reward_qi_seq2seq[batch][0].item()))
+                        print(
+                            "    [seq2] : {} {:.2f} => ({:.2f}) <= {:.2f}".format(
+                                infer_helper.ids_to_string(
+                                    seq2seq_replies[batch]),
+                                reward_s_seq2seq[batch][0].item(),
+                                reward_s_seq2seq[batch][0].item() +
+                                reward_qi_seq2seq[batch][
+                                    0].item(),
+                                reward_qi_seq2seq[batch][0].item()))
                         print("    [RL greedy] : {}".format(
                             infer_helper.ids_to_string(replies[batch])))
                         print(
