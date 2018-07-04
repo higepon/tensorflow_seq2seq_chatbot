@@ -934,16 +934,17 @@ class Trainer:
                                              seq2seq_train_data[1])
 
                 # Calc 1/N_a * logP_seq2seq(a|p_i, q_i) for each sampled.
-                max_len, reward_s = self.calc_reward_s(seq2seq_model,
-                                                       seq2seq_train_data,
-                                                       samples)
+                reward_s = self.calc_reward_s(seq2seq_model,
+                                              seq2seq_train_data,
+                                              samples)
 
                 # Calc 1/N_qi * logP_backward(qi|a)
                 # TODO: Vectorized implementation here.
-                reward_qi = self.calc_reward_qi(backward_model, max_len,
+                reward_qi = self.calc_reward_qi(backward_model,
                                                 rl_train_data, samples)
 
                 reward = reward_s + reward_qi
+                max_len = len(samples[0])
                 reward_avg = np.sum(reward) / max_len / batch_size
 
                 # standardize reward
@@ -1010,10 +1011,11 @@ class Trainer:
                     assert is_restored
                     print("step={}, global_step={}".format(step, global_step))
 
-    def calc_reward_qi(self, backward_model, max_len, train_data, samples):
+    def calc_reward_qi(self, backward_model, train_data, samples):
         hparams = backward_model.hparams
         batch_size = hparams.batch_size
-
+        max_len = len(samples[0])
+        print("reward_qi size=", batch_size, max_len)
         reward_qi = np.zeros((batch_size, max_len))
         # target label with eos.
         # [batch_size, dec_length]
@@ -1045,7 +1047,7 @@ class Trainer:
             assert (tweet_len != 0)
             p /= tweet_len
             # reward is zero, after eos. So that we can ignore them.
-            for i in range(tweet_len):
+            for i in range(min([tweet_len, max_len])):
                 reward_qi[batch][i] = p
         return reward_qi
 
@@ -1072,7 +1074,7 @@ class Trainer:
             # reward is zero, after eos. So that we can ignore them.
             for i in range(tweet_len):
                 reward_s[batch][i] = p
-        return max_len, reward_s
+        return reward_s
 
     @staticmethod
     def format_enc_inputs(hparams, model, replies):
