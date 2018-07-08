@@ -264,10 +264,11 @@ class ChatbotModel:
 
         self.dec_inputs, self.dec_tgt_lengths, self._logits, \
         self.sample_logits, self.sample_replies, \
-        self.sample_log_probs_selected, self.infer_logits, self.replies, \
+        self.log_probs_selected, self.infer_logits, self.replies, \
         self.beam_replies = self._build_decoder(
             hparams, self.enc_inputs_lengths, emb_encoder,
             enc_state, enc_outputs)
+
         self._log_probs = tf.nn.log_softmax(self.infer_logits)
 
         self.reward = tf.placeholder(tf.float32, name="reward")
@@ -320,8 +321,9 @@ class ChatbotModel:
             self.enc_inputs_lengths: enc_inputs_lengths,
             self.sampled: sampled
         }
-        return self.sess.run(self.sample_log_probs_selected,
-                             feed_dict=infer_feed_dic)
+        return self.sess.run(
+            [self.log_probs_selected, self.sample_logits],
+            feed_dict=infer_feed_dic)
 
     def infer_beam_search(self, enc_inputs, enc_inputs_lengths):
         """
@@ -401,7 +403,7 @@ class ChatbotModel:
 
     def _build_rl_optimizer(self, hparams):
         # todo mask the sampling results
-        sample_log_prob_shape = tf.shape(self.sample_log_probs_selected)
+        sample_log_prob_shape = tf.shape(self.log_probs_selected)
         reward_shape = tf.shape(self.reward)
         reward_shape_print = tf.Print(reward_shape,
                                       [reward_shape],
@@ -412,16 +414,16 @@ class ChatbotModel:
 
         asserts = [tf.assert_equal(sample_log_prob_shape[0],
                                    reward_shape_print[0],
-                                   [self.sample_log_probs_selected,
+                                   [self.log_probs_selected,
                                     self.reward]),
                    tf.assert_equal(sample_log_prob_shape[1],
                                    reward_shape_print[1],
-                                   [self.sample_log_probs_selected,
+                                   [self.log_probs_selected,
                                     self.reward]), reward_print
                    ]
         with tf.control_dependencies(asserts):
             loss = -tf.reduce_sum(
-                self.sample_log_probs_selected * self.reward) / tf.to_float(
+                self.log_probs_selected * self.reward) / tf.to_float(
                 hparams.batch_size)
         train_op = self._build_optimizer_with_loss(self.global_step, hparams,
                                                    loss)
@@ -642,19 +644,27 @@ class ChatbotModel:
         #                                       self.beam_predicted_ids)
 
         # Sample Inference graph
-        sample_logits, sample_replies = self._build_sample_inference(hparams,
-                                                                     embedding_encoder,
-                                                                     enc_state,
-                                                                     enc_inputs_lengths,
-                                                                     enc_outputs,
-                                                                     dec_cell,
-                                                                     projection_layer,
-                                                                     self.scope)
+        _, sample_replies = self._build_sample_inference(hparams,
+                                                         embedding_encoder,
+                                                         enc_state,
+                                                         enc_inputs_lengths,
+                                                         enc_outputs,
+                                                         dec_cell,
+                                                         projection_layer,
+                                                         self.scope)
+
+        # Here we use infer_logits which is generated from argmax.
+        # We don't use sample_logits for RL, because infer_logts and
+        # sample_logits are different.
+        # And eventually infer_logits should become our desiered inference
+        # with our RL training.
+        logits_print = tf.Print(infer_logits, [infer_logits],
+                                message="infer_logits")
         indices = self._convert_indices(self.sampled)
-        sample_log_probs = tf.nn.log_softmax(sample_logits)
-        sample_log_probs_selected = tf.gather_nd(sample_log_probs, indices)
-        return dec_inputs, dec_tgt_lengths, logits, sample_logits, \
-               sample_replies, sample_log_probs_selected, infer_logits, \
+        log_probs = tf.nn.log_softmax(logits_print)
+        log_probs_selected = tf.gather_nd(log_probs, indices)
+        return dec_inputs, dec_tgt_lengths, logits, logits_print, \
+               sample_replies, log_probs_selected, infer_logits, \
                replies, beam_replies
 
     @staticmethod
@@ -976,7 +986,8 @@ class Trainer:
                             infer_helper.ids_to_string(
                                 seq2seq_train_data[0][:, batch]))
                         print(
-                            "    [seq2] : {} {:.2f} => ({:.2f}) <= {:.2f}".format(
+                            "    [seq2] : {} {:.2f} => ({:.2f}) <= {"
+                            ":.2f}".format(
                                 infer_helper.ids_to_string(
                                     seq2seq_replies[batch]),
                                 reward_s_seq2seq[batch][0].item(),
@@ -987,7 +998,8 @@ class Trainer:
                         print("    [RL greedy] : {}".format(
                             infer_helper.ids_to_string(replies[batch])))
                         print(
-                            "    [RL sample]: {} {:.2f} => ({:.2f}) <= {:.2f}".format(
+                            "    [RL sample]: {} {:.2f} => ({:.2f}) <= {"
+                            ":.2f}".format(
                                 infer_helper.ids_to_string(samples[batch]),
                                 reward_s[batch][0].item(),
                                 reward_s[batch][0].item() + reward_qi[batch][
@@ -1055,11 +1067,53 @@ class Trainer:
 
     @staticmethod
     def calc_reward_s(seq2seq_model, train_data, samples):
-        log_probs_sampled = seq2seq_model.log_probs_sampled(
+        max_len = len(samples[0])
+        # [batch_size, dec_len]
+        log_probs_sampled, logits1 = seq2seq_model.log_probs_sampled(
             train_data[0],
             train_data[1],
             samples)
-        max_len = len(samples[0])
+        # log_probs_sampled2, logits2 = seq2seq_model.log_probs_sampled(
+        #     train_data[0],
+        #     train_data[1],
+        #     samples)
+        #
+        # for b in range(seq2seq_model.hparams.batch_size):
+        #     for i in range(max_len):
+        #         for v in range(seq2seq_model.hparams.vocab_size):
+        #             if logits1[b][i][v] != logits2[b][i][v]:
+        #                 print("Unmatch b={} i={} v={} {} vs {}".format(b, i, v,
+        #                                                                logits1[
+        #                                                                    b][
+        #                                                                    i][
+        #                                                                    v],
+        #                                                                logits2[
+        #                                                                    b][
+        #                                                                    i][
+        #                                                                    v]))
+
+        # if np.array_equal(log_probs_sampled, log_probs_sampled2):
+        #     print("log probs equl")
+        # else:
+        #     print("noooo")
+
+        # [batch_size, dec_len, vocab_size]
+        log_probs = seq2seq_model.log_probs(train_data[0], train_data[1])
+        # for batch in range(seq2seq_model.hparams.batch_size):
+        #     log_probs_sampled_batch = log_probs_sampled[batch]
+        #     for i in range(max_len):
+        #         print("debugging[{}][{}] {} {} = {}".format(batch, i,
+        #                                                     log_probs_sampled_batch[
+        #                                                         i] ==
+        #                                                     log_probs[batch][i][
+        #                                                         samples[batch][
+        #                                                             i]],
+        #                                                     log_probs_sampled_batch[
+        #                                                         i],
+        #                                                     log_probs[batch][i][
+        #                                                         samples[batch][
+        #                                                             i]]))
+
         batch_size = seq2seq_model.hparams.batch_size
         reward_s = np.zeros((batch_size, max_len))
         for batch in range(batch_size):
