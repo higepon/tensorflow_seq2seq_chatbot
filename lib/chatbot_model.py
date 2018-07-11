@@ -269,6 +269,7 @@ class ChatbotModel:
             hparams, self.enc_inputs_lengths, emb_encoder,
             enc_state, enc_outputs)
 
+        self._probs = tf.nn.softmax(self.infer_logits)
         self._log_probs = tf.nn.log_softmax(self.infer_logits)
 
         self.reward = tf.placeholder(tf.float32, name="reward")
@@ -306,14 +307,16 @@ class ChatbotModel:
             self.enc_inputs: enc_inputs,
             self.enc_inputs_lengths: enc_inputs_lengths,
         }
-        return self.sess.run(self.replies, feed_dict=infer_feed_dic)
+        return self.sess.run([self.replies, self.infer_logits],
+                             feed_dict=infer_feed_dic)
 
     def log_probs(self, enc_inputs, enc_inputs_lengths):
         infer_feed_dic = {
             self.enc_inputs: enc_inputs,
             self.enc_inputs_lengths: enc_inputs_lengths,
         }
-        return self.sess.run(self._log_probs, feed_dict=infer_feed_dic)
+        return self.sess.run([self._log_probs, self._probs],
+                             feed_dict=infer_feed_dic)
 
     def log_probs_sampled(self, enc_inputs, enc_inputs_lengths, sampled):
         infer_feed_dic = {
@@ -920,7 +923,7 @@ class Trainer:
 
         vocab = seq2seq_data_source.vocab
         rev_vocab = seq2seq_data_source.rev_vocab
-        infer_helper = InferenceHelper(rl_model, vocab, rev_vocab)
+        infer_helper_rl = InferenceHelper(rl_model, vocab, rev_vocab)
 
         graph = rl_model.sess.graph
         _ = tf.summary.FileWriter(rl_hparams.model_path, graph)
@@ -962,16 +965,33 @@ class Trainer:
                 reward /= (np.std(reward))
 
                 self._print_log("reward_avg", reward_avg)
+                self._print_log("entropy", self.calc_policy_entropy(infer_helper_rl))
 
                 if True:  # step % 5 == 0:
+                    validation_tweets = [
+                        "危うく子供を引きかけた……駐車場でバックしようとしてたら子供が走って来てた:(",
+                        "鏡に写る自分の顔を見て思ったヤバい、痩せすぎて頰が…そこで一大決心！今夜からちゃんと食べる",
+                        "エスカレーター乗る位置で関西帰ってきたな〜〜って実感します🤔"]
+
+                    for t in validation_tweets:
+                        infer_helper_rl.print_inferences(t)
+
                     # greedy results from RL rl_model
-                    replies = rl_model.infer(seq2seq_train_data[0],
-                                             seq2seq_train_data[1])
+                    replies, _ = rl_model.infer(seq2seq_train_data[0],
+                                                seq2seq_train_data[1])
 
-                    seq2seq_replies = seq2seq_model.infer(seq2seq_train_data[0],
-                                                          seq2seq_train_data[1])
+                    # This is for debug to see if probability of RL looks
+                    # reasonable.
+                    reward_s_rl = self.calc_reward_s(
+                        rl_model,
+                        seq2seq_train_data,
+                        replies)
 
-                    # This is for debug to see if reward_s looks reasonable
+                    seq2seq_replies, _ = seq2seq_model.infer(
+                        seq2seq_train_data[0],
+                        seq2seq_train_data[1])
+
+                    # This is for debug to see if reward_s looks reasonable.
                     reward_s_seq2seq = self.calc_reward_s(
                         seq2seq_model,
                         seq2seq_train_data,
@@ -983,24 +1003,26 @@ class Trainer:
 
                     for batch in range(2):
                         print(
-                            infer_helper.ids_to_string(
+                            infer_helper_rl.ids_to_string(
                                 seq2seq_train_data[0][:, batch]))
                         print(
                             "    [seq2] : {} {:.2f} => ({:.2f}) <= {"
                             ":.2f}".format(
-                                infer_helper.ids_to_string(
+                                infer_helper_rl.ids_to_string(
                                     seq2seq_replies[batch]),
                                 reward_s_seq2seq[batch][0].item(),
                                 reward_s_seq2seq[batch][0].item() +
                                 reward_qi_seq2seq[batch][
                                     0].item(),
                                 reward_qi_seq2seq[batch][0].item()))
-                        print("    [RL greedy] : {}".format(
-                            infer_helper.ids_to_string(replies[batch])))
+                        print("    [RL greedy] : {} {:.2f} => ".format(
+                            infer_helper_rl.ids_to_string(replies[batch]),
+                            reward_s_rl[batch][0].item()
+                        ))
                         print(
                             "    [RL sample]: {} {:.2f} => ({:.2f}) <= {"
                             ":.2f}".format(
-                                infer_helper.ids_to_string(samples[batch]),
+                                infer_helper_rl.ids_to_string(samples[batch]),
                                 reward_s[batch][0].item(),
                                 reward_s[batch][0].item() + reward_qi[batch][
                                     0].item(),
@@ -1018,12 +1040,41 @@ class Trainer:
                     assert is_restored
                     is_restored = rl_model.restore()
                     assert is_restored
-                    self._print_inferences(step, tweets, infer_helper)
+                    self._print_inferences(step, tweets, infer_helper_rl)
                     now = datetime.datetime.now()
                     print("delta:", (now - last_saved_time).total_seconds())
                     last_saved_time = now
                     assert is_restored
                     print("step={}, global_step={}".format(step, global_step))
+
+    #
+    # Calculate action entropy.
+    #
+    # In general entropy is defined as -E[logP(X)] which is
+    #  -Sum(p(X)logP(X)). But we can't calculate it, because we can't
+    # enumerate all the
+    # possible actions (= replies). Because (A) it's gonna be dec_len^(
+    # vocab_size) pattern. (B) We can't list all the possible input to the
+    # model. Here we calculate the entropy by limiting target dec_len = 3 and
+    #  limiting # of input.
+    @staticmethod
+    def calc_policy_entropy(infer_helper):
+        tweet = "おはようございます。今日も暑いですね"
+        encoder_inputs, encoder_inputs_lengths = \
+            infer_helper.create_inference_input(
+                tweet)
+        log_probs, probs = infer_helper.model.log_probs(encoder_inputs,
+                                                        encoder_inputs_lengths)
+
+        target_dec_len = 2
+        # [dec_len, vocab_size]
+        log_prob = log_probs[0]
+        prob = probs[0]
+        entropy = 0.0
+        for i in range(target_dec_len):
+            for vocab_idx in range(infer_helper.model.hparams.vocab_size):
+                entropy = entropy + log_prob[i][vocab_idx] * prob[i][vocab_idx]
+        return -entropy
 
     def calc_reward_qi(self, backward_model, train_data, samples):
         hparams = backward_model.hparams
@@ -1037,8 +1088,8 @@ class Trainer:
         a_enc_inputs, a_enc_inputs_lengths = self.format_enc_inputs(
             hparams, backward_model, samples)
         # [batch_size, dec_len, vocab_size]
-        log_probs = backward_model.log_probs(a_enc_inputs,
-                                             a_enc_inputs_lengths)
+        log_probs, _ = backward_model.log_probs(a_enc_inputs,
+                                                a_enc_inputs_lengths)
         for batch in range(batch_size):
             tweet = qi[batch]
             tweet_len = 0
@@ -1082,15 +1133,19 @@ class Trainer:
         #     for i in range(max_len):
         #         for v in range(seq2seq_model.hparams.vocab_size):
         #             if logits1[b][i][v] != logits2[b][i][v]:
-        #                 print("Unmatch b={} i={} v={} {} vs {}".format(b, i, v,
-        #                                                                logits1[
+        #                 print("Unmatch b={} i={} v={} {} vs {}".format(b,
+        # i, v,
+        #
+        # logits1[
         #                                                                    b][
         #                                                                    i][
         #                                                                    v],
-        #                                                                logits2[
+        #
+        # logits2[
         #                                                                    b][
         #                                                                    i][
-        #                                                                    v]))
+        #
+        # v]))
 
         # if np.array_equal(log_probs_sampled, log_probs_sampled2):
         #     print("log probs equl")
@@ -1098,20 +1153,26 @@ class Trainer:
         #     print("noooo")
 
         # [batch_size, dec_len, vocab_size]
-        log_probs = seq2seq_model.log_probs(train_data[0], train_data[1])
+        # log_probs, _ = seq2seq_model.log_probs(train_data[0], train_data[1])
         # for batch in range(seq2seq_model.hparams.batch_size):
         #     log_probs_sampled_batch = log_probs_sampled[batch]
         #     for i in range(max_len):
         #         print("debugging[{}][{}] {} {} = {}".format(batch, i,
-        #                                                     log_probs_sampled_batch[
+        #
+        # log_probs_sampled_batch[
         #                                                         i] ==
-        #                                                     log_probs[batch][i][
-        #                                                         samples[batch][
+        #                                                     log_probs[
+        # batch][i][
+        #                                                         samples[
+        # batch][
         #                                                             i]],
-        #                                                     log_probs_sampled_batch[
+        #
+        # log_probs_sampled_batch[
         #                                                         i],
-        #                                                     log_probs[batch][i][
-        #                                                         samples[batch][
+        #                                                     log_probs[
+        # batch][i][
+        #                                                         samples[
+        # batch][
         #                                                             i]]))
 
         batch_size = seq2seq_model.hparams.batch_size
@@ -1364,7 +1425,7 @@ class InferenceHelper:
     def inferences(self, tweet):
         encoder_inputs, encoder_inputs_lengths = self.create_inference_input(
             tweet)
-        replies = self.model.infer(encoder_inputs, encoder_inputs_lengths)
+        replies, _ = self.model.infer(encoder_inputs, encoder_inputs_lengths)
         ids = replies[0].tolist()
         all_infer = [self.sanitize_text(self.ids_to_words(ids))]
         beam_replies, logits = self.model.infer_beam_search(encoder_inputs,
@@ -1854,8 +1915,8 @@ def test_training(hparams, model):
 
     if hparams.debug_verbose:
         print(inference_encoder_inputs)
-    replies = model.infer(inference_encoder_inputs,
-                          inference_encoder_inputs_lengths)
+    replies, _ = model.infer(inference_encoder_inputs,
+                             inference_encoder_inputs_lengths)
     print("Inferred replies", replies[0])
     print("Expected replies", training_target_labels[0])
 
@@ -1896,8 +1957,8 @@ def test_distributed_pattern(hparams):
         inference_encoder_inputs_lengths[i] = len(first_tweet)
 
     model.restore()
-    replies = model.infer(inference_encoder_inputs,
-                          inference_encoder_inputs_lengths)
+    replies, _ = model.infer(inference_encoder_inputs,
+                             inference_encoder_inputs_lengths)
     print("Inferred replies", replies[0])
 
     beam_replies, logits = model.infer_beam_search(inference_encoder_inputs,
