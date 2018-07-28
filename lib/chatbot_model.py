@@ -39,6 +39,12 @@ class Mode(Enum):
 drive_path = 'drive/seq2seq_data'
 
 
+def pp(*arguments):
+    print(*arguments)
+    with open("stdout.txt", "a") as fout:
+        print(*arguments, file=fout)
+
+
 def client_id():
     # noinspection SpellCheckingInspection
     clients = {'dfc1d5b22ba03430800179d23e522f6f': 'client1',
@@ -50,7 +56,7 @@ def client_id():
         return clients[hashlib.md5(email).hexdigest()]
 
 
-print(client_id())
+pp(client_id())
 current_client_id = client_id()
 
 mode = Mode.Test
@@ -62,7 +68,7 @@ mode = Mode.Test
 # mode = Mode.TweetBot
 
 class DeltaLogger:
-    def __init__(self, key, stdout=False):
+    def __init__(self, key, stdout=None):
         self.key = key
         self.stdout = stdout
 
@@ -76,7 +82,7 @@ class DeltaLogger:
 
         tflog("{}[{}]".format(self.key, current_client_id), delta_sec)
         if self.stdout is not None:
-            print("{}={}".format(self.key, round(delta_sec, 1)))
+            pp("1{}={}".format(self.key, round(delta_sec, 1)))
         if exc_type is None:
             return False
 
@@ -90,18 +96,18 @@ class Shell:
     def download_file_if_necessary(file_name):
         if os.path.exists(file_name):
             return
-        print("downloading {}...".format(file_name))
+        pp("downloading {}...".format(file_name))
         shutil.copy2(os.path.join(drive_path, file_name), file_name)
-        print("downloaded")
+        pp("downloaded")
 
     @staticmethod
     def download_model_data_if_necessary(model_path):
         if not os.path.exists(model_path):
             os.makedirs(model_path)
-        print("Downloading model files...")
+        pp("Downloading model files...")
         src_dir = os.path.join(drive_path, model_path)
         Shell.copy_all_files(src_dir, model_path)
-        print("done")
+        pp("done")
 
     @staticmethod
     def copy_all_files(src_dir, dst_dir):
@@ -110,10 +116,10 @@ class Shell:
                 src = os.path.join(src_dir, file)
                 dst = os.path.join(dst_dir, file)
                 if os.path.exists(dst) and filecmp.cmp(src, dst):
-                    print("Skip copying ", src)
+                    pp("Skip copying ", src)
                     continue
                 else:
-                    print("Copying ", src)
+                    pp("Copying ", src)
                 shutil.copy2(src, dst)
 
     @staticmethod
@@ -132,6 +138,10 @@ class Shell:
         for file in Shell.listdir(path):
             if re.match('.*events', file):
                 files.download(file)
+
+    @staticmethod
+    def download(path):
+        files.download(path)
 
     @staticmethod
     def remove_saved_model(hparams):
@@ -157,7 +167,7 @@ class Shell:
         file = open('{}/checkpoint'.format(path))
         text = file.read()
         file.close()
-        print(text)
+        pp("model_file", text)
         m = re.match(r".*ChatbotModel-(\d+)", text)
         model_name = m.group(1)
         files = ["checkpoint"]
@@ -170,12 +180,12 @@ class Shell:
         path = os.path.join(drive_path, model_path)
         os.makedirs(path, exist_ok=True)
         Shell.remove_all_files(os.path.join(drive_path, model_path))
-        print("Saving model in Google Drive...")
+        pp("Saving model in Google Drive...")
         for file in Shell.list_model_file(model_path):
-            print("Saving ", file)
+            pp("Saving ", file)
             shutil.copy2(os.path.join(model_path, file),
                          os.path.join(drive_path, model_path, file))
-        print("done")
+        pp("done")
 
 
 config_path = 'config.yml'
@@ -200,12 +210,11 @@ pb = Pushbullet(push_key)
 # /SparseSoftmaxCrossEntropyWithLogits = SparseSoftmaxCrossEntropyWithLogits[
 # T=DT_FLOAT, Tlabels=DT_INT32,
 
-print(tf.__version__)
+pp(tf.__version__)
 
 
 def has_gpu0():
     return tf.test.gpu_device_name() == "/device:GPU:0"
-
 
 class ModelDirectory(Enum):
     tweet_large = 'model/tweet_large'
@@ -421,7 +430,7 @@ class ChatbotModel:
             self.saver.restore(self.sess, last_model)
             return True
         else:
-            print("Created fresh model.")
+            pp("Created fresh model.")
             return False
 
     @staticmethod
@@ -501,7 +510,7 @@ class ChatbotModel:
         device = '/cpu:0'
         if has_gpu0():
             device = '/gpu:0'
-            print("$$$ GPU ENABLED $$$")
+            pp("$$$ GPU ENABLED $$$")
         return device
 
     @staticmethod
@@ -596,10 +605,10 @@ class ChatbotModel:
                     training_decoder)
 
         if hparams.debug_verbose:
-            print("rnn_output.shape=", final_outputs.rnn_output.shape)
-            print("sample_id.shape=", final_outputs.sample_id.shape)
-            print("final_state=", _final_state)
-            print("final_sequence_lengths.shape=",
+            pp("rnn_output.shape=", final_outputs.rnn_output.shape)
+            pp("sample_id.shape=", final_outputs.sample_id.shape)
+            pp("final_state=", _final_state)
+            pp("final_sequence_lengths.shape=",
                   _final_sequence_lengths.shape)
 
         logits = final_outputs.rnn_output
@@ -926,10 +935,10 @@ class Trainer:
                  should_clean_saved_model=False):
         if tweets is None:
             tweets = []
-        print("===== Train RL {} ====".format(seq2seq_source_path))
+        pp("===== Train RL {} ====".format(seq2seq_source_path))
         now = datetime.datetime.today().strftime("%Y%m%d%H%M%S")
-        print("{}_rl_test".format(now))
-        print("rl_hparams")
+        pp("{}_rl_test".format(now))
+        pp("rl_hparams")
         print_hparams(rl_hparams)
 
         seq2seq_data_source = TrainDataSource(seq2seq_source_path, rl_hparams)
@@ -983,7 +992,7 @@ class Trainer:
                 # Calc 1/N_qi * logP_backward(qi|a)
                 # TODO: Vectorized implementation here.
                 with delta("calc_reward_qi") as _:
-                    reward_qi = self.calc_reward_qi(backward_model,
+                   reward_qi = self.calc_reward_qi(backward_model,
                                                     rl_train_data, samples)
 
                 reward = reward_s + reward_qi
@@ -996,23 +1005,20 @@ class Trainer:
 
                 self._print_log("reward_avg", reward_avg)
                 with delta("calc_entropy") as _:
-                    self._print_log("entropy",
-                                    self.calc_policy_entropy(infer_helper_rl))
+                    self._print_log("entropy", self.calc_policy_entropy(infer_helper_rl))
 
                 if True:  # step % 5 == 0:
                     validation_tweets = [
                         "危うく子供を引きかけた……駐車場でバックしようとしてたら子供が走って来てた:(",
-                        "鏡に写る自分の顔を見て思ったヤバい、痩せすぎて頰が…そこで一大決心！今夜からちゃんと食べる",
-                        "エスカレーター乗る位置で関西帰ってきたな〜〜って実感します🤔"]
-
+                         "鏡に写る自分の顔を見て思ったヤバい、痩せすぎて頰が…そこで一大決心！今夜からちゃんと食べる",
+                         "エスカレーター乗る位置で関西帰ってきたな〜〜って実感します🤔"]
                     with delta("valid_infer") as _:
-                        for t in validation_tweets:
-                            infer_helper_rl.print_inferences(t)
+                         for t in validation_tweets:
+                             infer_helper_rl.print_inferences(t)
 
                     # greedy results from RL rl_model
                     with delta("rl_infer") as _:
-                        replies, _ = rl_model.infer(seq2seq_train_data[0],
-                                                    seq2seq_train_data[1])
+                        replies, _ = rl_model.infer(seq2seq_train_data[0], seq2seq_train_data[1])
 
                     # This is for debug to see if probability of RL looks
                     # reasonable.
@@ -1028,20 +1034,20 @@ class Trainer:
 
                     # This is for debug to see if reward_s looks reasonable.
                     with delta("calc_seq2seq_reward_s") as _:
-                        reward_s_seq2seq = self.calc_reward_s(
-                            seq2seq_model,
-                            seq2seq_train_data,
-                            seq2seq_replies)
+                         reward_s_seq2seq = self.calc_reward_s(
+                             seq2seq_model,
+                             seq2seq_train_data,
+                             seq2seq_replies)
                     with delta("calc_seq2seq_reward_qi") as _:
                         reward_qi_seq2seq = self.calc_reward_qi(backward_model,
                                                                 rl_train_data,
                                                                 seq2seq_replies)
 
                     for batch in range(2):
-                        print(
+                        pp(
                             infer_helper_rl.ids_to_string(
                                 seq2seq_train_data[0][:, batch]))
-                        print(
+                        pp(
                             "    [seq2] : {} {:.2f} => ({:.2f}) <= {"
                             ":.2f}".format(
                                 infer_helper_rl.ids_to_string(
@@ -1051,11 +1057,11 @@ class Trainer:
                                 reward_qi_seq2seq[batch][
                                     0].item(),
                                 reward_qi_seq2seq[batch][0].item()))
-                        print("    [RL greedy] : {} {:.2f} => ".format(
+                        pp("    [RL greedy] : {} {:.2f} => ".format(
                             infer_helper_rl.ids_to_string(replies[batch]),
                             reward_s_rl[batch][0].item()
                         ))
-                        print(
+                        pp(
                             "    [RL sample]: {} {:.2f} => ({:.2f}) <= {"
                             ":.2f}".format(
                                 infer_helper_rl.ids_to_string(samples[batch]),
@@ -1072,16 +1078,16 @@ class Trainer:
                         samples,
                         reward)
                 if step != 0 and step % 100 == 0:
-                    print("save and restore")
-                    rl_model.save()
-                    is_restored = rl_model.restore()
-                    assert is_restored
-                    self._print_inferences(step, tweets, infer_helper_rl)
-                    now = datetime.datetime.now()
-                    print("delta:", (now - last_saved_time).total_seconds())
-                    last_saved_time = now
-                    assert is_restored
-                    print("step={}, global_step={}".format(step, global_step))
+                   pp("save and restore")
+                   rl_model.save()
+                   is_restored = rl_model.restore()
+                   assert is_restored
+                   self._print_inferences(step, tweets, infer_helper_rl)
+                   now = datetime.datetime.now()
+                   pp("delta:", (now - last_saved_time).total_seconds())
+                   last_saved_time = now
+                   assert is_restored
+                   pp("step={}, global_step={}".format(step, global_step))
 
     #
     # Calculate action entropy.
@@ -1125,7 +1131,7 @@ class Trainer:
         hparams = backward_model.hparams
         batch_size = hparams.batch_size
         max_len = len(samples[0])
-        print("reward_qi size=", batch_size, max_len)
+        pp("reward_qi size=", batch_size, max_len)
         reward_qi = np.zeros((batch_size, max_len))
         # target label with eos.
         # [batch_size, dec_length]
@@ -1178,7 +1184,7 @@ class Trainer:
         #     for i in range(max_len):
         #         for v in range(seq2seq_model.hparams.vocab_size):
         #             if logits1[b][i][v] != logits2[b][i][v]:
-        #                 print("Unmatch b={} i={} v={} {} vs {}".format(b,
+        #                 pp("Unmatch b={} i={} v={} {} vs {}".format(b,
         # i, v,
         #
         # logits1[
@@ -1193,16 +1199,16 @@ class Trainer:
         # v]))
 
         # if np.array_equal(log_probs_sampled, log_probs_sampled2):
-        #     print("log probs equl")
+        #     pp("log probs equl")
         # else:
-        #     print("noooo")
+        #     pp("noooo")
 
         # [batch_size, dec_len, vocab_size]
         # log_probs, _ = seq2seq_model.log_probs(train_data[0], train_data[1])
         # for batch in range(seq2seq_model.hparams.batch_size):
         #     log_probs_sampled_batch = log_probs_sampled[batch]
         #     for i in range(max_len):
-        #         print("debugging[{}][{}] {} {} = {}".format(batch, i,
+        #         pp("debugging[{}][{}] {} {} = {}".format(batch, i,
         #
         # log_probs_sampled_batch[
         #                                                         i] ==
@@ -1290,7 +1296,7 @@ class Trainer:
 
     def train_seq2seq(self, hparams, tweets_path, val_tweets,
                       should_clean_saved_model=True, vocab_path=None):
-        print("===== Train Seq2Seq {} ====".format(tweets_path))
+        pp("===== Train Seq2Seq {} ====".format(tweets_path))
         print_hparams(hparams)
 
         if should_clean_saved_model:
@@ -1299,7 +1305,7 @@ class Trainer:
         return self._train_loop(data_source, hparams, val_tweets)
 
     def _print_inferences(self, global_step, tweets, helper, ):
-        print("==== {} ====".format(global_step))
+        pp("==== {} ====".format(global_step))
         len_array = []
         for tweet in tweets:
             len_array.append(len(helper.inferences(tweet)[0]))
@@ -1346,7 +1352,7 @@ class Trainer:
         device = '/cpu:0'
         if has_gpu0():
             device = '/gpu:0'
-            print("$$$ GPU ENABLED $$$")
+            pp("$$$ GPU ENABLED $$$")
         return device
 
     @staticmethod
@@ -1402,7 +1408,7 @@ class Trainer:
                     self._plot_if_necessary()
                     self._save_model_in_drive(hparams)
                 else:
-                    print('.', end='')
+                    pp('.', end='')
         return model, infer_helper
 
     def _plot_if_necessary(self):
@@ -1413,7 +1419,7 @@ class Trainer:
                        y_label='validation_loss')
 
     def _print_stats(self, hparams, learning_rate):
-        print("learning rate", learning_rate)
+        pp("learning rate", learning_rate)
         delta = (
                     datetime.datetime.now() -
                     self.last_stats_time).total_seconds() * 1000
@@ -1436,7 +1442,7 @@ class Trainer:
     @staticmethod
     def _print_log(key, value):
         tflog("{}[{}]".format(key, current_client_id), value)
-        print("{}={}".format(key, round(value, 1)))
+        pp("{}={}".format(key, round(value, 1)))
 
     @staticmethod
     def _plot(x, y, x_label="step", y_label='y'):
@@ -1493,9 +1499,9 @@ class InferenceHelper:
         return line
 
     def print_inferences(self, tweet):
-        print(tweet)
+        pp(tweet)
         for i, reply in enumerate(self.inferences(tweet)):
-            print("    [{}]{}".format(i, reply))
+            pp("    [{}]{}".format(i, reply))
 
     def words_to_ids(self, words):
         ids = []
@@ -1621,30 +1627,30 @@ class TrainDataGenerator:
                 os.remove(file)
 
     def generate(self, vocab_path=None):
-        print("generating enc and dec files...")
+        pp("generating enc and dec files...")
         self._generate_enc_dec()
-        print("generating vocab file...")
+        pp("generating vocab file...")
         if vocab_path is None:
             self._generate_vocab()
         else:
             shutil.copyfile(vocab_path, self.vocab_path)
-        print("loading vocab...")
+        pp("loading vocab...")
         vocab, _ = self._load_vocab()
-        print("generating id files...")
+        pp("generating id files...")
         self._generate_id_file(self.enc_path, self.enc_idx_path, vocab)
         self._generate_id_file(self.dec_path, self.dec_idx_path, vocab)
-        print("generating padded input file...")
+        pp("generating padded input file...")
         self._generate_enc_idx_padded(self.enc_idx_path,
                                       self.enc_idx_padded_path,
                                       self.enc_idx_len_path,
                                       self.hparams.encoder_length)
-        print("generating dec eos/sos files...")
+        pp("generating dec eos/sos files...")
         self._generate_dec_idx_eos(self.dec_idx_path, self.dec_idx_eos_path,
                                    self.hparams.decoder_length)
         self._generate_dec_idx_sos(self.dec_idx_path, self.dec_idx_sos_path,
                                    self.dec_idx_len_path,
                                    self.hparams.decoder_length)
-        print("done")
+        pp("done")
         return self._create_dataset()
 
     def _generate_id_file(self, source_path, dest_path, vocab):
@@ -1675,7 +1681,7 @@ class TrainDataGenerator:
         vocab_list = self.start_vocabs + sorted(vocab_dic, key=vocab_dic.get,
                                                 reverse=True)
         if len(vocab_list) > self.max_vocab_size:
-            print("vocab_len=", len(vocab_list))
+            pp("vocab_len=", len(vocab_list))
             vocab_list = vocab_list[:self.max_vocab_size]
         with gfile.GFile(self.vocab_path, mode="w") as vocab_file:
             for w in vocab_list:
@@ -1879,7 +1885,7 @@ def print_hparams(hparams):
                 'max_gradient_norm', 'beam_width', 'num_train_steps',
                 'model_path']:
         result[key] = hparams.get(key)
-    print(result)
+    pp("hparams=", result)
 
 
 # Helper functions to test
@@ -1921,9 +1927,9 @@ def make_test_training_data(hparams):
 
 def test_training(hparams, model):
     if hparams.use_attention:
-        print("==== training model[attention] ====")
+        pp("==== training model[attention] ====")
     else:
-        print("==== training model ====")
+        pp("==== training model ====")
     first_tweet, train_encoder_inputs, train_encoder_inputs_lengths, \
     training_target_labels, training_decoder_inputs = make_test_training_data(
         hparams)
@@ -1935,7 +1941,7 @@ def test_training(hparams, model):
                         np.ones(hparams.batch_size,
                                 dtype=int) * hparams.decoder_length)
         if i % 5 == 0 and hparams.debug_verbose:
-            print('.', end='')
+            pp('.', end='')
 
         if i % 15 == 0:
             model.save()
@@ -1954,21 +1960,21 @@ def test_training(hparams, model):
     log_prob65 = model.log_prob(inference_encoder_inputs,
                                 inference_encoder_inputs_lengths,
                                 np.array([6, 5]))
-    print("log_prob for 54", log_prob54)
-    print("log_prob for 65", log_prob65)
+    pp("log_prob for 54", log_prob54)
+    pp("log_prob for 65", log_prob65)
 
     reward = model.reward_ease_of_answering(hparams.encoder_length,
                                             inference_encoder_inputs,
                                             inference_encoder_inputs_lengths,
                                             np.array([[5], [6]]))
-    print("reward=", reward)
+    pp("reward=", reward)
 
     if hparams.debug_verbose:
-        print(inference_encoder_inputs)
+        pp(inference_encoder_inputs)
     replies, _ = model.infer(inference_encoder_inputs,
                              inference_encoder_inputs_lengths)
-    print("Inferred replies", replies[0])
-    print("Expected replies", training_target_labels[0])
+    pp("Inferred replies", replies[0])
+    pp("Expected replies", training_target_labels[0])
 
 
 def test_distributed_pattern(hparams):
@@ -1976,7 +1982,7 @@ def test_distributed_pattern(hparams):
         shutil.rmtree(d, ignore_errors=True)
         os.makedirs(d, exist_ok=True)
 
-    print('==== test_distributed_pattern[{} {}] ===='.format(
+    pp('==== test_distributed_pattern[{} {}] ===='.format(
         'attention' if hparams.use_attention else '',
         'beam' if hparams.beam_width > 0 else ''))
 
@@ -2009,15 +2015,15 @@ def test_distributed_pattern(hparams):
     model.restore()
     replies, _ = model.infer(inference_encoder_inputs,
                              inference_encoder_inputs_lengths)
-    print("Inferred replies", replies[0])
+    pp("Inferred replies", replies[0])
 
     beam_replies, logits, _, _ = model.infer_beam_search(
         inference_encoder_inputs,
         inference_encoder_inputs_lengths)
 
-    print("logits", logits[0])
-    print("Inferred replies candidate0", beam_replies[0][:, 0])
-    print("Inferred replies candidate1", beam_replies[0][:, 1])
+    pp("logits", logits[0])
+    pp("Inferred replies candidate0", beam_replies[0][:, 0])
+    pp("Inferred replies candidate1", beam_replies[0][:, 1])
 
     inference_encoder_inputs = np.empty(
         (hparams.encoder_length, hparams.batch_size),
@@ -2031,8 +2037,8 @@ def test_distributed_pattern(hparams):
 
     replies = model.sample(inference_encoder_inputs,
                            inference_encoder_inputs_lengths)
-    print("sample replies", replies[0])
-    print("Expected replies", training_target_labels[0])
+    pp("sample replies", replies[0])
+    pp("Expected replies", training_target_labels[0])
 
 
 def test_distributed_one(enable_attention):
@@ -2052,7 +2058,7 @@ def clean_model_path(model_path):
 
 
 def print_header(text):
-    print("============== {} ==============".format(text))
+    pp("============== {} ==============".format(text))
 
 
 def test_tweets_small_swapped(hparams):
@@ -2080,4 +2086,4 @@ def test_tweets_large_swapped(hparams):
     return trainer.model
 
 
-print("module reloaded9")
+pp("module reloaded9")
