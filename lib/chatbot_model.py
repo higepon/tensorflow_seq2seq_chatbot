@@ -412,10 +412,10 @@ class ChatbotModel:
             self.reward: reward
         }
 
-        _, global_step = self.sess.run(
-            [self.rl_train_op, self.global_step],
+        _, global_step, loss = self.sess.run(
+            [self.rl_train_op, self.global_step, self.rl_loss],
             feed_dict=feed_dict)
-        return global_step
+        return global_step, loss
 
     def save(self, model_path=None):
         if model_path is None:
@@ -1027,6 +1027,12 @@ class Trainer:
                             rl_model,
                             seq2seq_train_data,
                             replies)
+
+                    with delta("calc_rl_reward_qi") as _:
+                        reward_qi_rl = self.calc_reward_qi(backward_model,
+                                                           rl_train_data,
+                                                           replies)
+
                     with delta("seq2seq_infer") as _:
                         seq2seq_replies, _ = seq2seq_model.infer(
                             seq2seq_train_data[0],
@@ -1057,10 +1063,12 @@ class Trainer:
                                 reward_qi_seq2seq[batch][
                                     0].item(),
                                 reward_qi_seq2seq[batch][0].item()))
-                        pp("    [RL greedy] : {} {:.2f} => ".format(
+                        pp("    [RL greedy] : {} {:.2f} => ({:.2f}) <= {:.2f}".format(
                             infer_helper_rl.ids_to_string(replies[batch]),
-                            reward_s_rl[batch][0].item()
-                        ))
+                            reward_s_rl[batch][0].item(),
+                            reward_s_rl[batch][0].item() +
+                            reward_qi_rl[batch][0].item(),
+                            reward_qi_rl[batch][0].item()))
                         pp(
                             "    [RL sample]: {} {:.2f} => ({:.2f}) <= {"
                             ":.2f}".format(
@@ -1072,11 +1080,12 @@ class Trainer:
 
                 rl_hparams = rl_model.hparams
                 with delta("train_with_reward") as _:
-                    global_step = rl_model.train_with_reward(
+                    global_step, loss = rl_model.train_with_reward(
                         seq2seq_train_data[0],
                         seq2seq_train_data[1],
                         samples,
                         reward)
+                    self._print_log("rl_loss", loss)
                 if step != 0 and step % 100 == 0:
                    pp("save and restore")
                    rl_model.save()
@@ -1408,7 +1417,7 @@ class Trainer:
                     self._plot_if_necessary()
                     self._save_model_in_drive(hparams)
                 else:
-                    pp('.', end='')
+                    print('.', end='')
         return model, infer_helper
 
     def _plot_if_necessary(self):
@@ -1941,7 +1950,7 @@ def test_training(hparams, model):
                         np.ones(hparams.batch_size,
                                 dtype=int) * hparams.decoder_length)
         if i % 5 == 0 and hparams.debug_verbose:
-            pp('.', end='')
+            print('.', end='')
 
         if i % 15 == 0:
             model.save()
