@@ -1000,7 +1000,8 @@ class Trainer:
                 reward_avg = np.sum(reward) / max_len / batch_size
 
                 # standardize reward
-                reward -= np.mean(reward)
+                # don't shift mean (by RL tips)
+                # reward -= np.mean(reward)
                 reward /= (np.std(reward))
 
                 self._print_log("reward_avg", reward_avg)
@@ -1096,6 +1097,7 @@ class Trainer:
                    pp("delta:", (now - last_saved_time).total_seconds())
                    last_saved_time = now
                    assert is_restored
+                   self._save_model_in_drive(rl_hparams)
                    pp("step={}, global_step={}".format(step, global_step))
 
     #
