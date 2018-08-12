@@ -42,8 +42,10 @@ def pp(*arguments):
     with open("stdout.txt", "a") as fout:
         print(*arguments, file=fout)
 
+
 def is_local():
     return platform.system() == 'Darwin'
+
 
 def client_id():
     if is_local():
@@ -57,12 +59,11 @@ def client_id():
         email = d['id_token']['email'].encode('utf-8')
         return clients[hashlib.md5(email).hexdigest()]
 
+
 if is_local():
     drive_path = '/Users/higepon/Google Drive/seq2seq_data'
 else:
     drive_path = 'drive/seq2seq_data'
-    
-
 
 pp(client_id())
 current_client_id = client_id()
@@ -89,7 +90,8 @@ class DeltaLogger:
         end_time = datetime.datetime.now()
         delta_sec = (end_time - self.start_time).total_seconds()
 
-        tflog("{}[{}]".format(self.key, current_client_id), delta_sec, step=self.step)
+        tflog("{}[{}]".format(self.key, current_client_id), delta_sec,
+              step=self.step)
         if self.stdout is not None:
             pp("1{}={}".format(self.key, round(delta_sec, 1)))
         if exc_type is None:
@@ -224,6 +226,7 @@ pp(tf.__version__)
 
 def has_gpu0():
     return tf.test.gpu_device_name() == "/device:GPU:0"
+
 
 class ModelDirectory(Enum):
     tweet_large = 'model/tweet_large'
@@ -618,7 +621,7 @@ class ChatbotModel:
             pp("sample_id.shape=", final_outputs.sample_id.shape)
             pp("final_state=", _final_state)
             pp("final_sequence_lengths.shape=",
-                  _final_sequence_lengths.shape)
+               _final_sequence_lengths.shape)
 
         logits = final_outputs.rnn_output
         return logits, wrapped_dec_cell, initial_state
@@ -1002,7 +1005,7 @@ class Trainer:
                 # Calc 1/N_qi * logP_backward(qi|a)
                 # TODO: Vectorized implementation here.
                 with delta("calc_reward_qi", global_step) as _:
-                   reward_qi = self.calc_reward_qi(backward_model,
+                    reward_qi = self.calc_reward_qi(backward_model,
                                                     rl_train_data, samples)
 
                 reward = reward_s + reward_qi
@@ -1016,20 +1019,23 @@ class Trainer:
 
                 self._print_log("reward_avg", reward_avg, step=global_step)
                 with delta("calc_entropy", global_step) as _:
-                    self._print_log("entropy", self.calc_policy_entropy(infer_helper_rl), global_step)
+                    self._print_log("entropy",
+                                    self.calc_policy_entropy(infer_helper_rl),
+                                    global_step)
 
                 if True:  # step % 5 == 0:
                     validation_tweets = [
                         "危うく子供を引きかけた……駐車場でバックしようとしてたら子供が走って来てた:(",
-                         "鏡に写る自分の顔を見て思ったヤバい、痩せすぎて頰が…そこで一大決心！今夜からちゃんと食べる",
-                         "エスカレーター乗る位置で関西帰ってきたな〜〜って実感します🤔"]
+                        "鏡に写る自分の顔を見て思ったヤバい、痩せすぎて頰が…そこで一大決心！今夜からちゃんと食べる",
+                        "エスカレーター乗る位置で関西帰ってきたな〜〜って実感します🤔"]
                     with delta("valid_infer", global_step) as _:
-                         for t in validation_tweets:
-                             infer_helper_rl.print_inferences(t)
+                        for t in validation_tweets:
+                            infer_helper_rl.print_inferences(t)
 
                     # greedy results from RL rl_model
                     with delta("rl_infer", global_step) as _:
-                        replies, _ = rl_model.infer(seq2seq_train_data[0], seq2seq_train_data[1])
+                        replies, _ = rl_model.infer(seq2seq_train_data[0],
+                                                    seq2seq_train_data[1])
 
                     # This is for debug to see if probability of RL looks
                     # reasonable.
@@ -1051,10 +1057,10 @@ class Trainer:
 
                     # This is for debug to see if reward_s looks reasonable.
                     with delta("calc_seq2seq_reward_s", global_step) as _:
-                         reward_s_seq2seq = self.calc_reward_s(
-                             seq2seq_model,
-                             seq2seq_train_data,
-                             seq2seq_replies)
+                        reward_s_seq2seq = self.calc_reward_s(
+                            seq2seq_model,
+                            seq2seq_train_data,
+                            seq2seq_replies)
                     with delta("calc_seq2seq_reward_qi", global_step) as _:
                         reward_qi_seq2seq = self.calc_reward_qi(backward_model,
                                                                 rl_train_data,
@@ -1074,12 +1080,14 @@ class Trainer:
                                 reward_qi_seq2seq[batch][
                                     0].item(),
                                 reward_qi_seq2seq[batch][0].item()))
-                        pp("    [RL greedy] : {} {:.2f} => ({:.2f}) <= {:.2f}".format(
-                            infer_helper_rl.ids_to_string(replies[batch]),
-                            reward_s_rl[batch][0].item(),
-                            reward_s_rl[batch][0].item() +
-                            reward_qi_rl[batch][0].item(),
-                            reward_qi_rl[batch][0].item()))
+                        pp(
+                            "    [RL greedy] : {} {:.2f} => ({:.2f}) <= {"
+                            ":.2f}".format(
+                                infer_helper_rl.ids_to_string(replies[batch]),
+                                reward_s_rl[batch][0].item(),
+                                reward_s_rl[batch][0].item() +
+                                reward_qi_rl[batch][0].item(),
+                                reward_qi_rl[batch][0].item()))
                         pp(
                             "    [RL sample]: {} {:.2f} => ({:.2f}) <= {"
                             ":.2f}".format(
@@ -1098,17 +1106,17 @@ class Trainer:
                         reward)
                     self._print_log("rl_loss", loss, global_step)
                 if step != 0 and step % 100 == 0:
-                   pp("save and restore")
-                   rl_model.save()
-                   is_restored = rl_model.restore()
-                   assert is_restored
-                   self._print_inferences(step, tweets, infer_helper_rl)
-                   now = datetime.datetime.now()
-                   pp("delta:", (now - last_saved_time).total_seconds())
-                   last_saved_time = now
-                   assert is_restored
-                   self._save_model_in_drive(rl_hparams)
-                   pp("step={}, global_step={}".format(step, global_step))
+                    pp("save and restore")
+                    rl_model.save()
+                    is_restored = rl_model.restore()
+                    assert is_restored
+                    self._print_inferences(step, tweets, infer_helper_rl)
+                    now = datetime.datetime.now()
+                    pp("delta:", (now - last_saved_time).total_seconds())
+                    last_saved_time = now
+                    assert is_restored
+                    self._save_model_in_drive(rl_hparams)
+                    pp("step={}, global_step={}".format(step, global_step))
 
     #
     # Calculate action entropy.
@@ -2107,4 +2115,82 @@ def test_tweets_large_swapped(hparams):
     return trainer.model
 
 
-pp("module reloaded9")
+conversations_large_hparams = copy.deepcopy(base_hparams).override_from_dict(
+    {
+        # In typical seq2seq chatbot
+        # num_layers=3, learning_rate=0.5, batch_size=64, vocab=20000-100000,
+        #  learning_rate decay is 0.99, which is taken care as default
+        # parameter in AdamOptimizer.
+        'batch_size': 128,
+        # of tweets should be dividable by batch_size default 64
+        'encoder_length': 28,
+        'decoder_length': 28,
+        'num_units': 1024,
+        'num_layers': 3,
+        'vocab_size': 60000,
+        # conversations.txt actually has about 70K uniq words.
+        'embedding_size': 1024,
+        'beam_width': 2,  # for faster iteration, this should be 10
+        'num_train_steps': 0,
+        'model_path': ModelDirectory.conversations_large.value,
+        'learning_rate': 0.5,
+        # For vocab_size 50000, num_layers 3, num_units 1024, tweet_large,
+        # starting learning_rate 0.05 works well, change it t0 0.01 at
+        # perplexity 800, changed it to 0.005 at 200.
+        'learning_rate_decay': 0.99,
+        'use_attention': True,
+
+    })
+
+# batch_size=128, learning_rage=0.001 work very well for RL. Loss decreases
+# as expected. enthropy didn't flat out.
+
+conversations_large_rl_hparams = copy.deepcopy(
+    conversations_large_hparams).override_from_dict(
+    {
+        'model_path': ModelDirectory.conversations_large_rl.value,
+        'num_train_steps': 2000,
+        'learning_rate': 0.001,
+        'beam_width': 3,
+    })
+
+conversations_large_backward_hparams = copy.deepcopy(
+    conversations_large_hparams).override_from_dict(
+    {
+        'model_path': ModelDirectory.conversations_large_backward.value,
+        'num_train_steps': 0,
+    })
+
+
+def test_train_rl():
+    resume_rl = True
+
+    conversations_txt = "conversations_large.txt"
+    Shell.download_file_if_necessary(conversations_txt)
+    ConversationTrainDataGenerator().generate(conversations_txt)
+
+    trainer = Trainer()
+    valid_tweets = ["さて福岡行ってきます！", "誰か飲みに行こう",
+                    "熱でてるけど、でもなんか食べなきゃーと思ってアイス買おうとしたの",
+                    "今日のドラマ面白そう！", "お腹すいたー", "おやすみ～", "おはようございます。寒いですね。",
+                    "さて帰ろう。明日は早い。", "今回もよろしくです。", "ばいとおわ！"]
+    trainer.train_seq2seq(conversations_large_hparams,
+                          "conversations_large_seq2seq.txt",
+                          valid_tweets, should_clean_saved_model=False)
+    trainer.train_seq2seq_swapped(conversations_large_backward_hparams,
+                                  "conversations_large_seq2seq.txt",
+                                  ["この難にでも応用可能なひどいやつ",
+                                   "おはようございます。明日はよろしくおねがいします。"],
+                                  vocab_path="conversations_large_seq2seq_vocab.txt",
+                                  should_clean_saved_model=False)
+
+    if not resume_rl:
+        sq.Shell.copy_saved_model(conversations_large_hparams,
+                                  conversations_large_rl_hparams)
+    Trainer().train_rl(conversations_large_rl_hparams,
+                       conversations_large_hparams,
+                       conversations_large_backward_hparams,
+                       "conversations_large_seq2seq.txt",
+
+                       "conversations_large_rl.txt",
+                       valid_tweets)
