@@ -9,6 +9,7 @@ import os
 import os.path
 import re
 import shutil
+import platform
 
 import MeCab
 # noinspection PyUnresolvedReferences
@@ -36,16 +37,17 @@ class Mode(Enum):
     TweetBot = auto()
 
 
-drive_path = 'drive/seq2seq_data'
-
-
 def pp(*arguments):
     print(*arguments)
     with open("stdout.txt", "a") as fout:
         print(*arguments, file=fout)
 
+def is_local():
+    return platform.system() == 'Darwin'
 
 def client_id():
+    if is_local():
+        return "local"
     # noinspection SpellCheckingInspection
     clients = {'dfc1d5b22ba03430800179d23e522f6f': 'client1',
                'f8e857a2d792038820ebb2ae8d803f7c': 'client2',
@@ -54,6 +56,12 @@ def client_id():
         d = json.load(json_data)
         email = d['id_token']['email'].encode('utf-8')
         return clients[hashlib.md5(email).hexdigest()]
+
+if is_local():
+    drive_path = '/Users/higepon/Google Drive/seq2seq_data'
+else:
+    drive_path = 'drive/seq2seq_data'
+    
 
 
 pp(client_id())
@@ -68,8 +76,9 @@ mode = Mode.Test
 # mode = Mode.TweetBot
 
 class DeltaLogger:
-    def __init__(self, key, stdout=None):
+    def __init__(self, key, step, stdout=None):
         self.key = key
+        self.step = step
         self.stdout = stdout
 
     def __enter__(self):
@@ -80,15 +89,15 @@ class DeltaLogger:
         end_time = datetime.datetime.now()
         delta_sec = (end_time - self.start_time).total_seconds()
 
-        tflog("{}[{}]".format(self.key, current_client_id), delta_sec)
+        tflog("{}[{}]".format(self.key, current_client_id), delta_sec, step=self.step)
         if self.stdout is not None:
             pp("1{}={}".format(self.key, round(delta_sec, 1)))
         if exc_type is None:
             return False
 
 
-def delta(key, stdout=False):
-    return DeltaLogger(key, stdout)
+def delta(key, step, stdout=False):
+    return DeltaLogger(key, step, stdout)
 
 
 class Shell:
@@ -970,8 +979,9 @@ class Trainer:
             rl_train_data_next = \
                 rl_data_source.train_dataset.make_one_shot_iterator().get_next()
 
+            global_step = None
             for step in range(rl_hparams.num_train_steps):
-                with delta("data_fetch_time") as _:
+                with delta("data_fetch_time", global_step) as _:
                     seq2seq_train_data = rl_model.sess.run(
                         seq2seq_train_data_next)
                     rl_train_data = rl_model.sess.run(rl_train_data_next)
@@ -979,19 +989,19 @@ class Trainer:
                 batch_size = rl_hparams.batch_size
 
                 # Sample!
-                with delta("sample_time") as _:
+                with delta("sample_time", global_step) as _:
                     samples, _ = rl_model.sample(seq2seq_train_data[0],
                                                  seq2seq_train_data[1])
 
                 # Calc 1/N_a * logP_seq2seq(a|p_i, q_i) for each sampled.
-                with delta("calc_reward_s") as _:
+                with delta("calc_reward_s", global_step) as _:
                     reward_s = self.calc_reward_s(seq2seq_model,
                                                   seq2seq_train_data,
                                                   samples)
 
                 # Calc 1/N_qi * logP_backward(qi|a)
                 # TODO: Vectorized implementation here.
-                with delta("calc_reward_qi") as _:
+                with delta("calc_reward_qi", global_step) as _:
                    reward_qi = self.calc_reward_qi(backward_model,
                                                     rl_train_data, samples)
 
@@ -1004,48 +1014,48 @@ class Trainer:
                 # reward -= np.mean(reward)
                 reward /= (np.std(reward))
 
-                self._print_log("reward_avg", reward_avg)
-                with delta("calc_entropy") as _:
-                    self._print_log("entropy", self.calc_policy_entropy(infer_helper_rl))
+                self._print_log("reward_avg", reward_avg, step=global_step)
+                with delta("calc_entropy", global_step) as _:
+                    self._print_log("entropy", self.calc_policy_entropy(infer_helper_rl), global_step)
 
                 if True:  # step % 5 == 0:
                     validation_tweets = [
                         "危うく子供を引きかけた……駐車場でバックしようとしてたら子供が走って来てた:(",
                          "鏡に写る自分の顔を見て思ったヤバい、痩せすぎて頰が…そこで一大決心！今夜からちゃんと食べる",
                          "エスカレーター乗る位置で関西帰ってきたな〜〜って実感します🤔"]
-                    with delta("valid_infer") as _:
+                    with delta("valid_infer", global_step) as _:
                          for t in validation_tweets:
                              infer_helper_rl.print_inferences(t)
 
                     # greedy results from RL rl_model
-                    with delta("rl_infer") as _:
+                    with delta("rl_infer", global_step) as _:
                         replies, _ = rl_model.infer(seq2seq_train_data[0], seq2seq_train_data[1])
 
                     # This is for debug to see if probability of RL looks
                     # reasonable.
-                    with delta("calc_rl_reward") as _:
+                    with delta("calc_rl_reward", global_step) as _:
                         reward_s_rl = self.calc_reward_s(
                             rl_model,
                             seq2seq_train_data,
                             replies)
 
-                    with delta("calc_rl_reward_qi") as _:
+                    with delta("calc_rl_reward_qi", global_step) as _:
                         reward_qi_rl = self.calc_reward_qi(backward_model,
                                                            rl_train_data,
                                                            replies)
 
-                    with delta("seq2seq_infer") as _:
+                    with delta("seq2seq_infer", global_step) as _:
                         seq2seq_replies, _ = seq2seq_model.infer(
                             seq2seq_train_data[0],
                             seq2seq_train_data[1])
 
                     # This is for debug to see if reward_s looks reasonable.
-                    with delta("calc_seq2seq_reward_s") as _:
+                    with delta("calc_seq2seq_reward_s", global_step) as _:
                          reward_s_seq2seq = self.calc_reward_s(
                              seq2seq_model,
                              seq2seq_train_data,
                              seq2seq_replies)
-                    with delta("calc_seq2seq_reward_qi") as _:
+                    with delta("calc_seq2seq_reward_qi", global_step) as _:
                         reward_qi_seq2seq = self.calc_reward_qi(backward_model,
                                                                 rl_train_data,
                                                                 seq2seq_replies)
@@ -1080,13 +1090,13 @@ class Trainer:
                                 reward_qi[batch][0].item()))
 
                 rl_hparams = rl_model.hparams
-                with delta("train_with_reward") as _:
+                with delta("train_with_reward", global_step) as _:
                     global_step, loss = rl_model.train_with_reward(
                         seq2seq_train_data[0],
                         seq2seq_train_data[1],
                         samples,
                         reward)
-                    self._print_log("rl_loss", loss)
+                    self._print_log("rl_loss", loss, global_step)
                 if step != 0 and step % 100 == 0:
                    pp("save and restore")
                    rl_model.save()
@@ -1447,12 +1457,12 @@ class Trainer:
             Shell.save_model_in_drive(hparams.model_path)
 
     @staticmethod
-    def _log(key, value):
-        tflog("{}[{}]".format(key, current_client_id), value)
+    def _log(key, value, step=None):
+        tflog("{}[{}]".format(key, current_client_id), value, step)
 
     @staticmethod
-    def _print_log(key, value):
-        tflog("{}[{}]".format(key, current_client_id), value)
+    def _print_log(key, value, step=None):
+        tflog("{}[{}]".format(key, current_client_id), value, step)
         pp("{}={}".format(key, round(value, 1)))
 
     @staticmethod
