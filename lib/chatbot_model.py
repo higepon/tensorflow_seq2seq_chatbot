@@ -87,8 +87,6 @@ class DeltaLogger:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        print("key=", self.key)
-        print("step=", self.step)
         end_time = datetime.datetime.now()
         delta_sec = (end_time - self.start_time).total_seconds()
 
@@ -96,7 +94,7 @@ class DeltaLogger:
             tflog("{}_{}".format(self.key, current_client_id), delta_sec,
                   step=self.step)
         if self.stdout is not None:
-            pp("1{}={}".format(self.key, round(delta_sec, 1)))
+            pp("{}={}".format(self.key, round(delta_sec, 1)))
         if exc_type is None:
             return False
 
@@ -1021,13 +1019,23 @@ class Trainer:
                     # reward -= np.mean(reward)
                     reward /= (np.std(reward))
 
-                    self._print_log("reward_avg", reward_avg, step=global_step)
-                    with delta("calc_entropy", global_step) as _:
-                        self._print_log("entropy",
-                                        self.calc_policy_entropy(infer_helper_rl),
-                                        global_step)
+                    rl_hparams = rl_model.hparams
+                    with delta("train_with_reward", global_step) as _:
+                        global_step, loss = rl_model.train_with_reward(
+                            seq2seq_train_data[0],
+                            seq2seq_train_data[1],
+                            samples,
+                            reward)
+                        self._print_log("rl_loss", loss, global_step)
 
-                    if True:  # step % 5 == 0:
+                    self._print_log("reward_avg", reward_avg, step=global_step)
+                    if global_step is not None and global_step % 20 == 0:
+                        # This takes about 100sec.
+                        with delta("calc_entropy", global_step) as _:
+                            self._print_log("entropy",
+                                            self.calc_policy_entropy(infer_helper_rl),
+                                            global_step)
+
                         validation_tweets = [
                             "危うく子供を引きかけた……駐車場でバックしようとしてたら子供が走って来てた:(",
                             "鏡に写る自分の顔を見て思ったヤバい、痩せすぎて頰が…そこで一大決心！今夜からちゃんと食べる",
@@ -1102,25 +1110,19 @@ class Trainer:
                                             0].item(),
                                         reward_qi[batch][0].item()))
 
-                    rl_hparams = rl_model.hparams
-                    with delta("train_with_reward", global_step) as _:
-                        global_step, loss = rl_model.train_with_reward(
-                            seq2seq_train_data[0],
-                            seq2seq_train_data[1],
-                            samples,
-                            reward)
-                        self._print_log("rl_loss", loss, global_step)
-                    if step != 0 and step % 100 == 0:
+                    if is_local() or (step != 0 and step % 50 == 0):
                         pp("save and restore")
                         with delta("save", global_step) as _:
                             rl_model.save()
                         with delta("restore", global_step) as _:
                             is_restored = rl_model.restore()
                         assert is_restored
-                        with delta("print_inferences", global_step) as _:
-                            self._print_inferences(step, tweets, infer_helper_rl)
                         with delta("save_drive", global_step) as _:
                             self._save_model_in_drive(rl_hparams)
+
+                    if (step != 0 and step % 100 == 0):
+                        with delta("print_inferences", global_step) as _:
+                            self._print_inferences(step, tweets, infer_helper_rl)
 
     #
     # Calculate action entropy.
