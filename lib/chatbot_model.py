@@ -78,7 +78,7 @@ mode = Mode.Test
 
 class DeltaLogger:
     def __init__(self, key, step, stdout=None):
-        self.key = key
+        self.key = "{}_time_sec".format(key)
         self.step = step
         self.stdout = stdout
 
@@ -87,11 +87,14 @@ class DeltaLogger:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        print("key=", self.key)
+        print("step=", self.step)
         end_time = datetime.datetime.now()
         delta_sec = (end_time - self.start_time).total_seconds()
 
-        tflog("{}[{}]".format(self.key, current_client_id), delta_sec,
-              step=self.step)
+        if self.step is not None:
+            tflog("{}_{}".format(self.key, current_client_id), delta_sec,
+                  step=self.step)
         if self.stdout is not None:
             pp("1{}={}".format(self.key, round(delta_sec, 1)))
         if exc_type is None:
@@ -984,139 +987,140 @@ class Trainer:
 
             global_step = None
             for step in range(rl_hparams.num_train_steps):
-                with delta("data_fetch_time", global_step) as _:
-                    seq2seq_train_data = rl_model.sess.run(
-                        seq2seq_train_data_next)
-                    rl_train_data = rl_model.sess.run(rl_train_data_next)
+                with delta("one_train_step", global_step) as _:
+                    with delta("data_fetch_time", global_step) as _:
+                        seq2seq_train_data = rl_model.sess.run(
+                            seq2seq_train_data_next)
+                        rl_train_data = rl_model.sess.run(rl_train_data_next)
 
-                batch_size = rl_hparams.batch_size
+                    batch_size = rl_hparams.batch_size
 
-                # Sample!
-                with delta("sample_time", global_step) as _:
-                    samples, _ = rl_model.sample(seq2seq_train_data[0],
-                                                 seq2seq_train_data[1])
+                    # Sample!
+                    with delta("sample_time", global_step) as _:
+                        samples, _ = rl_model.sample(seq2seq_train_data[0],
+                                                     seq2seq_train_data[1])
 
-                # Calc 1/N_a * logP_seq2seq(a|p_i, q_i) for each sampled.
-                with delta("calc_reward_s", global_step) as _:
-                    reward_s = self.calc_reward_s(seq2seq_model,
-                                                  seq2seq_train_data,
-                                                  samples)
+                    # Calc 1/N_a * logP_seq2seq(a|p_i, q_i) for each sampled.
+                    with delta("calc_reward_s", global_step) as _:
+                        reward_s = self.calc_reward_s(seq2seq_model,
+                                                      seq2seq_train_data,
+                                                      samples)
 
-                # Calc 1/N_qi * logP_backward(qi|a)
-                # TODO: Vectorized implementation here.
-                with delta("calc_reward_qi", global_step) as _:
-                    reward_qi = self.calc_reward_qi(backward_model,
-                                                    rl_train_data, samples)
+                    # Calc 1/N_qi * logP_backward(qi|a)
+                    # TODO: Vectorized implementation here.
+                    with delta("calc_reward_qi", global_step) as _:
+                        reward_qi = self.calc_reward_qi(backward_model,
+                                                        rl_train_data, samples)
 
-                reward = reward_s + reward_qi
-                max_len = len(samples[0])
-                reward_avg = np.sum(reward) / max_len / batch_size
+                    reward = reward_s + reward_qi
+                    max_len = len(samples[0])
+                    reward_avg = np.sum(reward) / max_len / batch_size
 
-                # standardize reward
-                # don't shift mean (by RL tips)
-                # reward -= np.mean(reward)
-                reward /= (np.std(reward))
+                    # standardize reward
+                    # don't shift mean (by RL tips)
+                    # reward -= np.mean(reward)
+                    reward /= (np.std(reward))
 
-                self._print_log("reward_avg", reward_avg, step=global_step)
-                with delta("calc_entropy", global_step) as _:
-                    self._print_log("entropy",
-                                    self.calc_policy_entropy(infer_helper_rl),
-                                    global_step)
+                    self._print_log("reward_avg", reward_avg, step=global_step)
+                    with delta("calc_entropy", global_step) as _:
+                        self._print_log("entropy",
+                                        self.calc_policy_entropy(infer_helper_rl),
+                                        global_step)
 
-                if True:  # step % 5 == 0:
-                    validation_tweets = [
-                        "危うく子供を引きかけた……駐車場でバックしようとしてたら子供が走って来てた:(",
-                        "鏡に写る自分の顔を見て思ったヤバい、痩せすぎて頰が…そこで一大決心！今夜からちゃんと食べる",
-                        "エスカレーター乗る位置で関西帰ってきたな〜〜って実感します🤔"]
-                    with delta("valid_infer", global_step) as _:
-                        for t in validation_tweets:
-                            infer_helper_rl.print_inferences(t)
+                    if True:  # step % 5 == 0:
+                        validation_tweets = [
+                            "危うく子供を引きかけた……駐車場でバックしようとしてたら子供が走って来てた:(",
+                            "鏡に写る自分の顔を見て思ったヤバい、痩せすぎて頰が…そこで一大決心！今夜からちゃんと食べる",
+                            "エスカレーター乗る位置で関西帰ってきたな〜〜って実感します🤔"]
+                        with delta("valid_infer", global_step) as _:
+                            for t in validation_tweets:
+                                infer_helper_rl.print_inferences(t)
 
-                    # greedy results from RL rl_model
-                    with delta("rl_infer", global_step) as _:
-                        replies, _ = rl_model.infer(seq2seq_train_data[0],
-                                                    seq2seq_train_data[1])
+                        # greedy results from RL rl_model
+                        with delta("rl_infer", global_step) as _:
+                            replies, _ = rl_model.infer(seq2seq_train_data[0],
+                                                        seq2seq_train_data[1])
 
-                    # This is for debug to see if probability of RL looks
-                    # reasonable.
-                    with delta("calc_rl_reward", global_step) as _:
-                        reward_s_rl = self.calc_reward_s(
-                            rl_model,
-                            seq2seq_train_data,
-                            replies)
+                        # This is for debug to see if probability of RL looks
+                        # reasonable.
+                        with delta("calc_rl_reward", global_step) as _:
+                            reward_s_rl = self.calc_reward_s(
+                                rl_model,
+                                seq2seq_train_data,
+                                replies)
 
-                    with delta("calc_rl_reward_qi", global_step) as _:
-                        reward_qi_rl = self.calc_reward_qi(backward_model,
-                                                           rl_train_data,
-                                                           replies)
+                        with delta("calc_rl_reward_qi", global_step) as _:
+                            reward_qi_rl = self.calc_reward_qi(backward_model,
+                                                               rl_train_data,
+                                                               replies)
 
-                    with delta("seq2seq_infer", global_step) as _:
-                        seq2seq_replies, _ = seq2seq_model.infer(
+                        with delta("seq2seq_infer", global_step) as _:
+                            seq2seq_replies, _ = seq2seq_model.infer(
+                                seq2seq_train_data[0],
+                                seq2seq_train_data[1])
+
+                        # This is for debug to see if reward_s looks reasonable.
+                        with delta("calc_seq2seq_reward_s", global_step) as _:
+                            reward_s_seq2seq = self.calc_reward_s(
+                                seq2seq_model,
+                                seq2seq_train_data,
+                                seq2seq_replies)
+                        with delta("calc_seq2seq_reward_qi", global_step) as _:
+                            reward_qi_seq2seq = self.calc_reward_qi(backward_model,
+                                                                    rl_train_data,
+                                                                    seq2seq_replies)
+
+                        with delta("debug_print", global_step) as _:
+                            for batch in range(2):
+                                pp(
+                                    infer_helper_rl.ids_to_string(
+                                        seq2seq_train_data[0][:, batch]))
+                                pp(
+                                    "    [seq2] : {} {:.2f} => ({:.2f}) <= {"
+                                    ":.2f}".format(
+                                        infer_helper_rl.ids_to_string(
+                                            seq2seq_replies[batch]),
+                                        reward_s_seq2seq[batch][0].item(),
+                                        reward_s_seq2seq[batch][0].item() +
+                                        reward_qi_seq2seq[batch][
+                                            0].item(),
+                                        reward_qi_seq2seq[batch][0].item()))
+                                pp(
+                                    "    [RL greedy] : {} {:.2f} => ({:.2f}) <= {"
+                                    ":.2f}".format(
+                                        infer_helper_rl.ids_to_string(replies[batch]),
+                                        reward_s_rl[batch][0].item(),
+                                        reward_s_rl[batch][0].item() +
+                                        reward_qi_rl[batch][0].item(),
+                                        reward_qi_rl[batch][0].item()))
+                                pp(
+                                    "    [RL sample]: {} {:.2f} => ({:.2f}) <= {"
+                                    ":.2f}".format(
+                                        infer_helper_rl.ids_to_string(samples[batch]),
+                                        reward_s[batch][0].item(),
+                                        reward_s[batch][0].item() + reward_qi[batch][
+                                            0].item(),
+                                        reward_qi[batch][0].item()))
+
+                    rl_hparams = rl_model.hparams
+                    with delta("train_with_reward", global_step) as _:
+                        global_step, loss = rl_model.train_with_reward(
                             seq2seq_train_data[0],
-                            seq2seq_train_data[1])
-
-                    # This is for debug to see if reward_s looks reasonable.
-                    with delta("calc_seq2seq_reward_s", global_step) as _:
-                        reward_s_seq2seq = self.calc_reward_s(
-                            seq2seq_model,
-                            seq2seq_train_data,
-                            seq2seq_replies)
-                    with delta("calc_seq2seq_reward_qi", global_step) as _:
-                        reward_qi_seq2seq = self.calc_reward_qi(backward_model,
-                                                                rl_train_data,
-                                                                seq2seq_replies)
-
-                    for batch in range(2):
-                        pp(
-                            infer_helper_rl.ids_to_string(
-                                seq2seq_train_data[0][:, batch]))
-                        pp(
-                            "    [seq2] : {} {:.2f} => ({:.2f}) <= {"
-                            ":.2f}".format(
-                                infer_helper_rl.ids_to_string(
-                                    seq2seq_replies[batch]),
-                                reward_s_seq2seq[batch][0].item(),
-                                reward_s_seq2seq[batch][0].item() +
-                                reward_qi_seq2seq[batch][
-                                    0].item(),
-                                reward_qi_seq2seq[batch][0].item()))
-                        pp(
-                            "    [RL greedy] : {} {:.2f} => ({:.2f}) <= {"
-                            ":.2f}".format(
-                                infer_helper_rl.ids_to_string(replies[batch]),
-                                reward_s_rl[batch][0].item(),
-                                reward_s_rl[batch][0].item() +
-                                reward_qi_rl[batch][0].item(),
-                                reward_qi_rl[batch][0].item()))
-                        pp(
-                            "    [RL sample]: {} {:.2f} => ({:.2f}) <= {"
-                            ":.2f}".format(
-                                infer_helper_rl.ids_to_string(samples[batch]),
-                                reward_s[batch][0].item(),
-                                reward_s[batch][0].item() + reward_qi[batch][
-                                    0].item(),
-                                reward_qi[batch][0].item()))
-
-                rl_hparams = rl_model.hparams
-                with delta("train_with_reward", global_step) as _:
-                    global_step, loss = rl_model.train_with_reward(
-                        seq2seq_train_data[0],
-                        seq2seq_train_data[1],
-                        samples,
-                        reward)
-                    self._print_log("rl_loss", loss, global_step)
-                if step != 0 and step % 100 == 0:
-                    pp("save and restore")
-                    rl_model.save()
-                    is_restored = rl_model.restore()
-                    assert is_restored
-                    self._print_inferences(step, tweets, infer_helper_rl)
-                    now = datetime.datetime.now()
-                    pp("delta:", (now - last_saved_time).total_seconds())
-                    last_saved_time = now
-                    assert is_restored
-                    self._save_model_in_drive(rl_hparams)
-                    pp("step={}, global_step={}".format(step, global_step))
+                            seq2seq_train_data[1],
+                            samples,
+                            reward)
+                        self._print_log("rl_loss", loss, global_step)
+                    if step != 0 and step % 100 == 0:
+                        pp("save and restore")
+                        with delta("save", global_step) as _:
+                            rl_model.save()
+                        with delta("restore", global_step) as _:
+                            is_restored = rl_model.restore()
+                        assert is_restored
+                        with delta("print_inferences", global_step) as _:
+                            self._print_inferences(step, tweets, infer_helper_rl)
+                        with delta("save_drive", global_step) as _:
+                            self._save_model_in_drive(rl_hparams)
 
     #
     # Calculate action entropy.
@@ -1470,7 +1474,9 @@ class Trainer:
 
     @staticmethod
     def _print_log(key, value, step=None):
-        tflog("{}[{}]".format(key, current_client_id), value, step)
+        if step is None:
+            return
+        tflog("{}_{}".format(key, current_client_id), value, step)
         pp("{}={}".format(key, round(value, 1)))
 
     @staticmethod
@@ -2185,8 +2191,8 @@ def test_train_rl():
                                   should_clean_saved_model=False)
 
     if not resume_rl:
-        sq.Shell.copy_saved_model(conversations_large_hparams,
-                                  conversations_large_rl_hparams)
+        Shell.copy_saved_model(conversations_large_hparams,
+                               conversations_large_rl_hparams)
     Trainer().train_rl(conversations_large_rl_hparams,
                        conversations_large_hparams,
                        conversations_large_backward_hparams,
