@@ -10,6 +10,8 @@ import os.path
 import re
 import shutil
 import platform
+import random
+import tweepy
 
 import MeCab
 # noinspection PyUnresolvedReferences
@@ -2121,6 +2123,76 @@ def test_tweets_large_swapped(hparams):
     trainer.train_seq2seq_swapped(hparams, "tweets_large.txt", tweets,
                                   should_clean_saved_model=False)
     return trainer.model
+
+
+class StreamListener(tweepy.StreamListener):
+    def __init__(self, api, helper):
+        self.api = api
+        self.helper = helper
+
+    def on_status(self, status):
+        # done handle @reply only
+        # done print reply
+        # add model parameter
+        # direct reply
+        # unk reply
+        # shuffle beam search
+        print("{0}: {1}".format(status.text, status.author.screen_name))
+
+        screen_name = status.author.screen_name
+        # ignore my tweets
+        if screen_name == self.api.me().screen_name:
+            print("Ignored my tweet")
+            return True
+        elif status.text.startswith("@{0}".format(self.api.me().screen_name)):
+
+            replies = self.helper.inferences(status.text)
+            reply = random.choice(replies)
+            reply = "@" + status.author.screen_name + " " + reply
+            print(reply)
+            self.api.update_status(status=reply,
+                                   in_reply_to_status_id=status.id)
+
+            return True
+
+    @staticmethod
+    def on_error(status_code, **kwargs):
+        print(status_code)
+        return True
+
+
+def listener(hparams):
+    Shell.download_model_data_if_necessary(hparams.model_path)
+
+    infer_model = Trainer().create_model(hparams)
+
+    source_path = "conversations_large.txt"
+    Shell.download_file_if_necessary(source_path)
+    generator = TrainDataGenerator(source_path=source_path, hparams=hparams)
+    _, vocab, rev_vocab = generator.generate()
+    infer_model.restore()
+    helper = InferenceHelper(infer_model, vocab, rev_vocab)
+
+    config_yml = 'config.yml'
+    Shell.download_file_if_necessary(config_yml)
+    file = open(config_yml, 'rt')
+    cfg = yaml.load(file)['twitter']
+
+    consumer_key = cfg['consumer_key']
+    consumer_secret = cfg['consumer_secret']
+    access_token = cfg['access_token']
+    access_token_secret = cfg['access_token_secret']
+
+    auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+    auth.set_access_token(access_token, access_token_secret)
+    api = tweepy.API(auth)
+
+    while True:
+        #    try:
+        stream = tweepy.Stream(auth=api.auth,
+                               listener=StreamListener(api, helper))
+        print("listener starting...")
+        stream.userstream()
 
 
 conversations_large_hparams = copy.deepcopy(base_hparams).override_from_dict(
